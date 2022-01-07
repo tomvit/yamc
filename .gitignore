@@ -1,0 +1,6 @@
+__pycache__
+*.pyc
+logs/
+config
+bin/yamc-env
+logs/

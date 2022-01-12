@@ -7,7 +7,8 @@ from __future__ import unicode_literals
 import time
 import RPi.GPIO as GPIO
 
-from yamc import BaseProvider, WorkerComponent
+from yamc.providers import BaseProvider
+from yamc import WorkerComponent
 
 class GPIOPulseProvider(BaseProvider, WorkerComponent):
     '''

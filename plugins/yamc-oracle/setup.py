@@ -33,8 +33,8 @@ def find_version(*file_paths):
 # setup main 
 # required modules
 install_requires = [
-    'yamc_server==1.0.0',
-    'dms-collector==2.0.0',
+    'yamc_server>=1.0.2',
+    'dms-collector>=2.0.0',
     'cx-Oracle==8.3.0'
 ]
 

@@ -241,13 +241,15 @@ class Config():
             'disable_existing_loggers': True,
             'formatters': { 
                 'standard': { 
-                    'format': '%(asctime)s [%(name)-10.10s] [%(levelname)-1.1s] %(message)s',
-                    'datefmt': '%Y-%m-%d %H:%M:%S'
-                },        
+                    'format': ColoredFormatter.format_header + ColoredFormatter.format_msg
+                }, 
+                'colored': {
+                    '()': ColoredFormatter
+                }   
             },
             'handlers': { 
                 'console': { 
-                    'formatter': 'standard',
+                    'formatter': 'colored',
                     'class': 'logging.StreamHandler',
                     'stream': 'ext://sys.stdout',  # Default is stderr
                 },
@@ -317,6 +319,7 @@ class ConfigPart():
         return "%s.%s"%(self.base_path,path) if self.base_path is not None else path
 
     def value(self, path, default=None, type=None, required=True, no_eval=False):
+        required = default is not None and required
         r = default
         if self._config is not None:
             val=reduce(lambda di,key: di.get(key,default) if isinstance(di, dict) else default, path.split("."), self._config)
@@ -351,7 +354,32 @@ class ConfigPart():
 
     def value_bool(self, path, default=None, required=False):
         return self.value(path, default=default, type=bool, required=required)
-    
+
+
+class ColoredFormatter(logging.Formatter):
+
+    grey = "\x1b[38;20m"
+    yellow = "\x1b[33;20m"
+    red = "\x1b[31;20m"
+    bold_red = "\x1b[31;1m"
+    reset = "\x1b[0m"
+    format_header = "%(asctime)s [%(name)-10.10s] "
+    format_msg = "[%(levelname)-1.1s] %(message)s"
+
+    FORMATS = {
+        logging.DEBUG: format_header + grey + format_msg + reset,
+        logging.INFO: format_header + grey + format_msg + reset,
+        logging.WARNING: format_header + yellow + format_msg + reset,
+        logging.ERROR: format_header + red + format_msg + reset,
+        logging.CRITICAL: format_header + bold_red + format_msg + reset
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno)
+        formatter = logging.Formatter(log_fmt)
+        return formatter.format(record)
+            
+            
 # from https://stackoverflow.com/questions/2183233/how-to-add-a-custom-loglevel-to-pythons-logging-facility/35804945#35804945
 def addLoggingLevel(levelName, levelNum, methodName=None):
     '''
@@ -400,3 +428,5 @@ def addLoggingLevel(levelName, levelNum, methodName=None):
     setattr(logging, levelName, levelNum)
     setattr(logging.getLoggerClass(), methodName, logForLevel)
     setattr(logging, methodName, logToRoot)
+    
+    

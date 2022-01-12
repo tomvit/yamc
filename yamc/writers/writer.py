@@ -82,10 +82,9 @@ class Writer(WorkerComponent):
                 
                 # write the batch
                 try:
-                    self.log.info("Writing the batch, size=%d."%(len(batch)))
+                    self.log.info("Writing the batch, batch-size=%d, queue-size=%d."%(len(batch), self.queue.qsize()))
                     if not self.args.test: 
                         self.do_write(batch)
-                        self.log.info("The writer's queue size is %d."%(self.queue.qsize()))
                     else:
                         self.log.info("Running in test mode, the writing operation is disabled.")
                 except HealthCheckException as e:

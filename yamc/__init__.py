@@ -12,9 +12,11 @@ import yamc.writers
 import yamc.collectors
 import yamc.providers
 
+#from .config import ColoredFormatter 
+
 from .utils import Map, import_class
 
-__version__ = "1.0.0"
+__version__ = "1.0.2"
 
 yamc_scope = Map(
     writers=None,

@@ -98,7 +98,7 @@ class CronCollector(BaseCollector):
                 if k == "time":
                     continue
                 data_point[k] = _eval_expression(self.data_def, k)
-            _write_data_point(sefl.data_def, data_point)
+            _write_data_point(self.data_def, data_point)
         
     def get_time_to_sleep(self, itr): 
         while True:

@@ -8,11 +8,22 @@ import logging
 import threading 
 import time 
 
+from .utils import merge_dicts
+
 class BaseComponent():
     def __init__(self, config, component_id):
+        self.base_config = config
         self.component_id = component_id
         self.log = logging.getLogger("%s"%(component_id))
         self.args = config.args
+        self.enabled = True
+        
+    def base_scope(self, custom_scope=None):
+        from yamc import yamc_scope
+        return merge_dicts(yamc_scope, self.base_config.custom_functions, custom_scope)
+        
+    def destroy(self):
+        pass
     
 class WorkerComponent(BaseComponent):
     def __init__(self, config, component_id):
@@ -24,7 +35,7 @@ class WorkerComponent(BaseComponent):
         pass
     
     def start(self, exit_event):
-        self.log.info("Starting the worker thread.")
+        self.log.info(f"Starting the worker thread '{self.component_id}'.")
         self.start_time = time.time()
         self.thread = threading.Thread(target=self.worker, args=(exit_event,), daemon=True)
         self.thread.start()
@@ -53,4 +64,9 @@ class PythonExpression():
     def __setstate__(self, state):
         self.expr_str,_ = state
         self.expr=self.compile()
+    
+    def __str__(self):
+        return "!py %s"%self.expr_str
+        
+        
         

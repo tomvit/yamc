@@ -7,6 +7,7 @@ from __future__ import unicode_literals
 import random 
 import string
 import re
+import time
 
 from functools import reduce
 
@@ -58,6 +59,8 @@ class Map(dict):
 
 def deep_find(dic, keys, default=None, type=None):
     val=reduce(lambda di,key: di.get(key,default) if isinstance(di, dict) else default, keys.split("."), dic)
+    if val == default:
+        return default
     return type(val) if type != None else val 
 
 def import_class(name):
@@ -77,3 +80,29 @@ def is_number(s):
     p = re.compile(r'^[\+\-]?[0-9]*(\.[0-9]+)?$')
     return s != '' and p.match(s)
 
+def perf_counter(counter=None):
+    if counter is None:
+        return time.perf_counter()
+    else:
+        return time.perf_counter()-counter
+        
+def deep_merge(source, destination):
+    for key, value in source.items():
+        if isinstance(value, dict):
+            node = destination.setdefault(key, {})
+            deep_merge(value, node)
+        else:
+            if key in destination and isinstance(destination[key],list) and isinstance(value,list):
+                for x in value:
+                    destination[key].append(x)                 
+            else: 
+                if key not in destination:   
+                    destination[key] = value
+    return destination
+
+def merge_dicts(*dicts):
+    result = {}
+    for d in dicts:
+        if d is not None:
+            result.update(d)
+    return result        

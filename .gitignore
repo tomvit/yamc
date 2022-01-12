@@ -1,6 +1,8 @@
 __pycache__
 *.pyc
 logs/
-config
 bin/yamc-env
 logs/
+data/backlog
+*.egg-info
+dist

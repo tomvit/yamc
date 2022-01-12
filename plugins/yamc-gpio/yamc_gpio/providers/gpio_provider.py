@@ -7,10 +7,12 @@ from __future__ import unicode_literals
 import time
 import RPi.GPIO as GPIO
 
-from .provider import BaseProvider
-from yamc import WorkerComponent
+from yamc import BaseProvider, WorkerComponent
 
-class GPIOProvider(BaseProvider, WorkerComponent):
+class GPIOPulseProvider(BaseProvider, WorkerComponent):
+    '''
+    GPIO pulse provider that allows to collect pulses from a GPIO channel. 
+    '''
     
     def __init__(self, config, component_id):
         super().__init__(config, component_id)

@@ -14,7 +14,7 @@ import yamc.providers
 
 from .utils import Map, import_class
 
-__version__ = "1.0"
+__version__ = "1.0.0"
 
 yamc_scope = Map(
     writers=None,
@@ -29,10 +29,12 @@ def load_components(name, config):
         raise Exception("There are no components of type %s"%name)
     for component_id,component_config in config.config.value(name).items():
         try:
-            clazz = import_class(component_config["class"])   
-            components[component_id] = clazz(config, component_id)
+            clazz = import_class(component_config["class"])  
+            component = clazz(config, component_id)
+            if component.enabled:
+                components[component_id] = component
         except Exception as e:
-            raise Exception("Cannot load component '%s' due to: %s"%(component_id, str(e)))
+            raise Exception("Cannot load component '%s'. %s"%(component_id, str(e)))
     return components
 
 def init_scope(config):
@@ -45,7 +47,6 @@ def init_scope(config):
     if config.custom_functions is not None:
         for k,v in config.custom_functions.items():
             yamc_scope[k] = v
-        
 
 def start_components(exit_event):
     for component in yamc_scope.all_components:
@@ -57,4 +58,7 @@ def join_components():
         if isinstance(component, WorkerComponent):
             component.join()
 
-            
+def destroy_components():
+    for component in yamc_scope.all_components:
+        component.destroy()
+                

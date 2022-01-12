@@ -8,7 +8,6 @@ import time
 import threading
 import croniter
 import sys
-import traceback
 
 from datetime import datetime
 from yamc import WorkerComponent
@@ -22,6 +21,7 @@ class BaseCollector(WorkerComponent):
 
         super().__init__(config, component_id)       
         self.config = config.collector(component_id)  
+        self.enabled = self.config.value_bool("enabled", default=True)
         self.writers = {} 
         
         # read writer configurations for this this collector 
@@ -33,6 +33,9 @@ class BaseCollector(WorkerComponent):
         for w in yamc_scope.writers.values():
             if w.component_id in self.writers.keys():
                 self.writers[w.component_id]["__writer"] = w
+                
+        if not self.enabled:
+            self.log.debug(f"The collector {component_id} is disabled")
     
     def write(self, data):
         for w in self.writers.values():
@@ -48,18 +51,17 @@ class CronCollector(BaseCollector):
         if not croniter.croniter.is_valid(self.schedule):
             raise Exception("The value of schedule property '%s' is not valid!"%self.schedule)
         self.log.info("The cron schedule is %s"%(self.schedule))
-        self.data_def = self.config.value("data", raise_ex=True)
+        self.data_def = self.config.value("data", required=True, no_eval=True)
         if not isinstance(self.data_def, dict) and not callable(getattr(self.data_def,"eval",None)):
-            raise Exception("The value of data property must be dict or python expression!")
+            raise Exception("The value of data property must be dict or a Python expression!")
         
     def job(self, exit_event):
-        from yamc import yamc_scope
         
         def _eval_expression(data_def, key):
             v = None
             try: 
                 if callable(getattr(data_def[key],"eval",None)):
-                    v = data_def[key].eval(yamc_scope)
+                    v = data_def[key].eval(self.base_scope())
                 else:
                     v = data_def[key]
                 if v is None:
@@ -81,7 +83,7 @@ class CronCollector(BaseCollector):
                 self.log.debug("There are no fields to write!")
         
         if not isinstance(self.data_def, dict):
-            data = self.data_def.eval(yamc_scope)
+            data = self.data_def.eval(self.base_scope())
             if isinstance(data,list):
                 for d in data:
                     _write_data_point(None, d)
@@ -99,9 +101,14 @@ class CronCollector(BaseCollector):
             _write_data_point(sefl.data_def, data_point)
         
     def get_time_to_sleep(self, itr): 
-        next_run = itr.get_next(datetime)
-        seconds = (next_run-datetime.now()).total_seconds()
-        self.log.debug("The next job '%s' will run at %s (in %f seconds)."%(self.component_id,next_run,seconds))
+        while True:
+            next_run = itr.get_next(datetime)
+            seconds = (next_run-datetime.now()).total_seconds()
+            if seconds > 0:
+                break
+            else:
+                self.log.warning(f"The next run of the job {self.component_id} already passed by {seconds} seconds. Trying the next iteration.")
+        self.log.debug(f"The next job of '{self.component_id}' will run at {next_run} (in {seconds} seconds).")
         return seconds
         
     def worker(self, exit_event):
@@ -114,7 +121,5 @@ class CronCollector(BaseCollector):
                 try:
                     self.job(exit_event)
                 except Exception as e:
-                    self.log.error("The job failed due to %s"%(str(e)))
-                    if self.args.debug:
-                        traceback.print_exc(file=sys.stderr)
+                    self.log.error("The job failed due to %s"%(str(e)), exc_info=self.args.debug or self.args.trace)
                 time2sleep = self.get_time_to_sleep(itr)

@@ -12,7 +12,6 @@ import logging
 import re
 import ast
 import pickle
-import traceback
 
 from queue import Queue
 from yamc.utils import Map, randomString
@@ -90,15 +89,13 @@ class Writer(WorkerComponent):
                     else:
                         self.log.info("Running in test mode, the writing operation is disabled.")
                 except HealthCheckException as e:
-                    self.log.error("Cannot write the batch due to writer's problem: %s. The batch will be stored in the backlog."%(str(e)))
-                    if self.args.debug:
-                        traceback.print_exc(file=sys.stderr)
+                    self.log.error("Cannot write the batch due to writer's problem: %s. The batch will be stored in the backlog."%(str(e)), 
+                        exc_info=self.args.debug or self.args.trace)
                     self._is_healthy = False
                     self.backlog.put(batch)
                 except Exception as e:
-                    self.log.error("Cannot write the batch. It will be discarded due to the following error: %s"%(str(e)))
-                    if self.args.debug:
-                        traceback.print_exc(file=sys.stderr)
+                    self.log.error("Cannot write the batch. It will be discarded due to the following error: %s"%(str(e)), 
+                        exc_info=self.args.debug or self.args.trace)
         
         prctime = time.time()
         while not exit_event.is_set():
@@ -116,7 +113,11 @@ class Writer(WorkerComponent):
         # write unprocessed items to the backlog
         if self.queue.qsize()>0:
             self.log.info("There are %d unprocessed items in the queue of the writer. Writing them all to the backlog."%(self.queue.qsize()))
-            self.backlog.put(self.read_all_items())
+            batch=[]
+            while self.queue.qsize() > 0:
+                batch.append(self.queue.get())
+                self.queue.task_done()
+            self.backlog.put(batch)
         
         self.log.info("The writer thread ended.")        
                             
@@ -138,11 +139,14 @@ class Backlog():
         self.all_files = files 
     
     def put(self, items):
-        file = "items_%s.data"%randomString()
-        with open(os.path.join(self.backlog_dir,file), "wb") as f:
-            pickle.dump(items, f, protocol=pickle.HIGHEST_PROTOCOL)
-        self.all_files.append(file)
-        self.log.debug("Writing data to the writer's backlog. The backlog size is %d."%(self.size()))
+        if self.writer.args.test:
+            self.log.info("Running in test mode, the backlog item will not be created")
+        else:
+            file = "items_%s.data"%randomString()
+            with open(os.path.join(self.backlog_dir,file), "wb") as f:
+                pickle.dump(items, f, protocol=pickle.HIGHEST_PROTOCOL)
+            self.all_files.append(file)
+            self.log.debug("Writing data to the writer's backlog. The backlog size is %d."%(self.size()))
     
     def peek(self, size):
         files = self.all_files[:min(size,len(self.all_files))]
@@ -170,15 +174,14 @@ class Backlog():
             while self.size() > 0:
                 batch_files, batch = self.peek(self.writer.batch_size)
                 try:
-                    if not self.writer.test:
+                    if not self.writer.args.test:
                         self.writer.do_write(batch)
                     else:
                         self.log.info("Running in test mode, writing of backlog files is disabled (the backlog will be removed from memory only).")
                     self.remove(batch_files)
                 except Exception as e:
-                    self.log.error("Cannot write item from the writer's backlog due to: %s"%(str(e)))
-                    if self.writer.args.debug:
-                        traceback.print_exc(file=sys.stderr)
+                    self.log.error("Cannot write item from the writer's backlog due to: %s"%(str(e)), 
+                        exc_info=self.writer.args.debug or self.writer.args.trace)
                     self.writer._is_healthy = False
                     break
             self.log.info("The processing of the backlog finished. The backlog size is %s."%self.size())

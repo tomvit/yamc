@@ -20,7 +20,7 @@ class InfluxDBWriter(Writer):
         self.user = self.config.value_str("user", default="")
         self.pswd = self.config.value_str("user", default="")
         self.dbname = self.config.value_str("dbname")
-        self.log.info("Creating client connection, host=%s, port=%s, user=%s, password=(hidden), dbname=%s"%(self.host, self.port, self.user, self.dbname))
+        self.log.info("Creating client connection, host=%s, port=%s, user=%s, password=(secret), dbname=%s"%(self.host, self.port, self.user, self.dbname))
         self.client = InfluxDBClient(self.host, self.port, self.user, self.pswd, self.dbname)
 
     def healthcheck(self): 
@@ -30,7 +30,7 @@ class InfluxDBWriter(Writer):
         
         def _value(v):
             if callable(getattr(v, "eval", None)):
-                return value.eval(Map(data=Map(data.data)))
+                return value.eval(self.base_scope(Map(data=Map(data.data))))
             else:
                 return value
         

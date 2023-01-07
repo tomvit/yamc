@@ -33,7 +33,7 @@ def find_version(*file_paths):
 # setup main
 # required modules
 install_requires = [
-    'yamc_server>=1.0.2',
+    'yamc_server>=1.1.0',
     'paho-mqtt==1.6.1'
 ]
 

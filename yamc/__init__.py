@@ -15,7 +15,7 @@ import yamc.providers
 
 from .utils import Map, import_class
 
-__version__ = "1.0.2"
+__version__ = "1.1.0"
 
 yamc_scope = Map(
     writers=None,

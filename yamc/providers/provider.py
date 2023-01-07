@@ -24,9 +24,14 @@ class BaseProvider(BaseComponent):
     def __init__(self, config, component_id):
         super().__init__(config, component_id)
         self.config = config.provider(component_id)
-        self.updated_time = None
+        self._updated_time = None
         self.data = None
         self.diff_storage = {}
+
+    @property
+    def updated_time(self):
+        self.update()
+        return self._updated_time
 
     def diff(self, id, value):
         '''
@@ -56,7 +61,7 @@ class BaseProvider(BaseComponent):
 
 class HttpProvider(BaseProvider):
     '''
-    Provider that allows to retrieve data using http protocol
+    A generic HTTP provider that retrieves data using HTTP.
     '''
     def __init__(self, config, component_id):
         super().__init__(config, component_id)
@@ -80,11 +85,11 @@ class HttpProvider(BaseProvider):
 
     def update(self):
         with self.lock:
-            if self.updated_time is None or self.data is None or time.time()-self.updated_time>self.max_age:
+            if self._updated_time is None or self.data is None or time.time()-self._updated_time>self.max_age:
                 self.init_session()
                 num_retries=0
                 while num_retries<3:
-                    self.updated_time = time.time()
+                    self._updated_time = time.time()
                     r = self.session.get(self.url)
                     if r.status_code == 404:
                         raise Exception("The resource at %s does not exist!"%(self.url))
@@ -107,7 +112,7 @@ class HttpProvider(BaseProvider):
 
 class XmlHttpProvider(HttpProvider):
     '''
-    Provider that provides XML data retrieved over HTTP protocol
+    XML data provider retrieved over HTTP.
     '''
     def __init__(self, config, component_id):
         super().__init__(config, component_id)
@@ -156,7 +161,7 @@ class XmlHttpProvider(HttpProvider):
 
 class CsvHttpProvider(HttpProvider):
     '''
-    Provider that provides CSV data retrieved over HTTP protocol
+    CSV data provider retrieved over HTTP.
     '''
     def __init__(self, config, component_id):
         super().__init__(config, component_id)
@@ -211,19 +216,22 @@ class CsvHttpProvider(HttpProvider):
 
 class Event():
     '''
-    Event object
+    Event object provides a link between a specific pub/sub mechanism (such as MQTT)
+    and yamc providers and collectors.
     '''
-    def __init__(self, id):
+    def __init__(self, id, event_provider):
         self.id = id
         self.time = 0
         self.data = None
         self.callbacks = []
         self.history = []
+        self.provider = event_provider
 
     def update(self, data):
         self.time = time.time()
         self.data = data
         self.history.append(data)
+        self.provider.update()
         for callback in self.callbacks:
             callback(self)
 
@@ -246,9 +254,9 @@ class EventProvider(BaseProvider):
         self.events[event_id] = self.create_event(event_id)
 
     def create_event(self, event_id):
-        return Event(event_id)
+        return Event(event_id, self)
 
-    def select(self, *ids):
+    def select(self, *ids, silent=False):
         sources = []
         for id in ids:
             found = False
@@ -262,6 +270,24 @@ class EventProvider(BaseProvider):
                         found = True
                         if v not in sources:
                             sources.append(v)
-            if not found:
+            if not found and not silent:
                 self.log.warn(f"The event with pattern '{id}' cannot be found!")
         return sources
+
+    def select_one(self, id):
+        events = self.select(id, silent=True)
+        if len(events)>0:
+            return events[0]
+        else:
+            return None
+
+    def update(self, event=None):
+        self._updated_time = time.time()
+        if self.data is None:
+            self.data = Map()
+        if event is None:
+            for e in self.events.values():
+                self.data[e.id] = Map(time=e.time, data=e.data)
+        else:
+            self.data[event.id] = Map(time=event.time, data=event.data)
+        return True

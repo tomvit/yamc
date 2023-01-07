@@ -32,24 +32,26 @@ class PushoverWriter(Writer):
         finally:
             sock.close()
 
-    def do_write(self,items):
+    def items_per_collector(self, items):
         collectors = Map()
         for item in items:
             if not item.collector_id in collectors.keys():
                 collectors[item.collector_id] = []
             collectors[item.collector_id].append(Map(data=item.data,writer_config=item.writer_config))
+        return collectors.items()
 
-        for collector,items in collectors.items():
-            if len(items)>0:
-                self.log.debug("There are more than 1 item, will use the last one.")
-            item = items[-1]
-            self.log.info(f"Preparing pushover message for {collector}: {item.writer_config.message}")
+    def do_write(self,items):
+        for collector, _items in self.items_per_collector(items):
+            if len(_items)>0:
+                self.log.debug(f"{collector}: there are more than 1 item, will use the last one.")
+            item = _items[-1]
+            self.log.debug(f"{collector}: using the following data to prepare a message: " + str(item))
 
             if not item.writer_config.do_push:
-                self.log.info(f"The pushover is not enabled for this item.")
+                self.log.debug(f"{collector}: the message will not be sent, do_push was evaluated to False.")
                 continue
 
-            self.log.debug("Using the following data to create a message: " + str(item))
+            self.log.info(f"{collector}: sending pushover message '{item.writer_config.message}'")
             try:
                 r = requests.post(f"https://{self.pushover_host}{self.pushover_url}", data = {
                   "token": self.app_token,

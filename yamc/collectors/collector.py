@@ -67,8 +67,9 @@ class BaseCollector(WorkerComponent):
             _data.append(self.add_time(data))
         else:
             raise Exception("The data must be dict or list!")
-        self.history += _data
-        self.history = self.history[-min(self.max_history,len(self.history)):]
+        if self.max_history > 0:
+            self.history += _data
+            self.history = self.history[-min(self.max_history,len(self.history)):]
         return _data
 
     def write(self, data, scope=None):

@@ -23,10 +23,8 @@ def check_hostname(hostname):
 def format(msg, **kwargs):
     return msg.format(**kwargs)
 
-def hash(*data):
-    return hash(data)
-    # h = hashlib.new('sha256')
-    # for d in data:
-    #     print(d)
-    #     h.update(d)
-    # return h.hexdigest()
+def handle_error(expr, default):
+    try:
+        return eval(expr)
+    except:
+        return default

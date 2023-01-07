@@ -6,3 +6,4 @@ logs/
 data/backlog
 *.egg-info
 dist
+etc/tests

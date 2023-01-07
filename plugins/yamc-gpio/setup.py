@@ -21,7 +21,7 @@ def read(*parts):
     with codecs.open(path, encoding='utf-8') as fobj:
         return fobj.read()
 
-# finds the version of the package 
+# finds the version of the package
 def find_version(*file_paths):
     version_file = read(*file_paths)
     version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]",
@@ -29,8 +29,8 @@ def find_version(*file_paths):
     if version_match:
         return version_match.group(1)
     raise RuntimeError("Unable to find version string.")
-        
-# setup main 
+
+# setup main
 # required modules
 install_requires = [
     'yamc_server>=1.0.2',

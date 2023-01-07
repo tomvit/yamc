@@ -5,4 +5,4 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 from .collector import BaseCollector
-from .collector import CronCollector
+from .collector import CronCollector, EventCollector

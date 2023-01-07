@@ -4,10 +4,10 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-import requests 
-import time 
+import requests
+import time
 import re
-import threading 
+import threading
 import unidecode
 
 from lxml import etree
@@ -23,37 +23,37 @@ class BaseProvider(BaseComponent):
     '''
     def __init__(self, config, component_id):
         super().__init__(config, component_id)
-        self.config = config.provider(component_id)  
+        self.config = config.provider(component_id)
         self.updated_time = None
         self.data = None
         self.diff_storage = {}
-        
+
     def diff(self, id, value):
         '''
         Calculate the difference of the value identified by id
         '''
         if not isinstance(value,int) and not isinstance(value,float):
             raise Exception("Can only caclulate diff on values of type int or float! The value type is %s."%value.__class__.__name__)
-        
-        v = self.diff_storage.get(id) 
+
+        v = self.diff_storage.get(id)
         if v is None:
             v = Map(
                 prev_value=None,
-                last_value=None                
+                last_value=None
             )
             self.diff_storage[id] = v
-        
+
         if v.last_value is not None:
             v.prev_value = v.last_value
             v.last_value = value
             return v.last_value-v.prev_value
         else:
             v.last_value = value
-            return 0        
-        
+            return 0
+
     def update(self):
         pass
-    
+
 class HttpProvider(BaseProvider):
     '''
     Provider that allows to retrieve data using http protocol
@@ -76,7 +76,7 @@ class HttpProvider(BaseProvider):
                 self.log.info("Running the initialization request at %s"%(self.init_url))
                 self.session.get(self.init_url)
         except Exception as e:
-            self.log.error("The initialization request failed due to %s"%(str(e)))                
+            self.log.error("The initialization request failed due to %s"%(str(e)))
 
     def update(self):
         with self.lock:
@@ -96,15 +96,15 @@ class HttpProvider(BaseProvider):
                         time.sleep(1)
                     else:
                         break
-                #self.log.debug("The url '%s' retrieved the following data: %s"%(self.url,str(r.content.decode(self.encoding))))     
-                self.log.debug("The url '%s' retrieved the following data: (strip)"%(self.url))     
+                #self.log.debug("The url '%s' retrieved the following data: %s"%(self.url,str(r.content.decode(self.encoding))))
+                self.log.debug("The url '%s' retrieved the following data: (strip)"%(self.url))
                 self.data = r.content
                 return True
             else:
-                self.log.debug("The url '%s' retrieved data from cache."%(self.url))  
+                self.log.debug("The url '%s' retrieved data from cache."%(self.url))
                 return False
-        
-    
+
+
 class XmlHttpProvider(HttpProvider):
     '''
     Provider that provides XML data retrieved over HTTP protocol
@@ -115,19 +115,19 @@ class XmlHttpProvider(HttpProvider):
         self.namespaces = self.config.value("namespaces",default=None)
         self.str_decode_unicode = self.config.value("str_decode_unicode",default=True)
         self.xmlroot = None
-    
+
     def update(self):
         if super().update() or self.xmlroot is None:
             self.xmlroot = etree.fromstring(self.data)
             return True
         else:
             return False
-        
+
     def xpath(self, xpath, diff=False):
-        
+
         def _value(v):
             return v if not diff else self.diff(xpath,v)
-        
+
         def _int_or_float_or_str(v):
             if isinstance(v,str):
                 try:
@@ -136,12 +136,12 @@ class XmlHttpProvider(HttpProvider):
                     try:
                         return _value(float(v.strip()))
                     except:
-                        return unidecode.unidecode(v) if self.str_decode_unicode else v 
+                        return unidecode.unidecode(v) if self.str_decode_unicode else v
             elif isinstance(v,int) or isinstance(v,float):
                 return _value(v)
             else:
-                raise Exception("The xpath expression '%s' must provide a value of type int or float! The value was '%s'."%(xpath,str(v)))            
-        
+                raise Exception("The xpath expression '%s' must provide a value of type int or float! The value was '%s'."%(xpath,str(v)))
+
         self.update()
         d = self.xmlroot.xpath(xpath,namespaces=self.namespaces)
         if isinstance(d,list):
@@ -152,8 +152,8 @@ class XmlHttpProvider(HttpProvider):
                 raise Exception("The xpath '%s' cannot be evaluated!"%xpath)
         else:
             return _int_or_float_or_str(d)
-    
-        
+
+
 class CsvHttpProvider(HttpProvider):
     '''
     Provider that provides CSV data retrieved over HTTP protocol
@@ -172,23 +172,23 @@ class CsvHttpProvider(HttpProvider):
             s = self.data.decode(self.encoding)
             if self.str_decode_unicode:
                 s = unidecode.unidecode(s)
-            
+
             # read csv
             self.header = None
-            self.lines=[]            
+            self.lines=[]
             for l in s.split('\r\n'):
                 if self.header is None:
                     self.header = l.split(self.delimiter)
                 else:
                     if l.strip() != "":
                         self.lines.append(l.split(self.delimiter))
-            
+
             return True
         else:
             return False
-        
+
     def field(self, row_inx, name):
-        
+
         def _int_or_float_or_str(v):
             if isinstance(v,str):
                 try:
@@ -201,12 +201,67 @@ class CsvHttpProvider(HttpProvider):
             elif isinstance(v,int) or isinstance(v,float):
                 return v
             else:
-                raise Exception("The field value '%s' must be of type int or float! The value was '%s'."%(name,str(v)))            
-        
+                raise Exception("The field value '%s' must be of type int or float! The value was '%s'."%(name,str(v)))
+
         self.update()
         col_inx = self.header.index(name)
         if col_inx >= 0:
-            if abs(row_inx) >=0 and abs(row_inx) < len(self.lines): 
+            if abs(row_inx) >=0 and abs(row_inx) < len(self.lines):
                 return _int_or_float_or_str(self.lines[row_inx][col_inx])
-            
-    
+
+class Event():
+    '''
+    Event object
+    '''
+    def __init__(self, id):
+        self.id = id
+        self.time = 0
+        self.data = None
+        self.callbacks = []
+        self.history = []
+
+    def update(self, data):
+        self.time = time.time()
+        self.data = data
+        self.history.append(data)
+        for callback in self.callbacks:
+            callback(self)
+
+    def subscribe(self, callback):
+        self.callbacks.append(callback)
+
+class EventProvider(BaseProvider):
+    '''
+    Event data provider definining the base interface for event-based providers.
+    '''
+    def __init__(self, config, component_id):
+        super().__init__(config, component_id)
+        self.events = Map()
+        for e in self.config.value("events"):
+            self.add_event(e)
+
+    def add_event(self, event_id):
+        if self.events.get(event_id) is not None:
+            raise Exception(f"The event with id {event_id} already exists!")
+        self.events[event_id] = self.create_event(event_id)
+
+    def create_event(self, event_id):
+        return Event(event_id)
+
+    def select(self, *ids):
+        sources = []
+        for id in ids:
+            found = False
+            e = self.events.get(id)
+            if e is not None:
+                sources.append(e)
+                found = True
+            else:
+                for k,v in self.events.items():
+                    if re.match(id,k):
+                        found = True
+                        if v not in sources:
+                            sources.append(v)
+            if not found:
+                self.log.warn(f"The event with pattern '{id}' cannot be found!")
+        return sources

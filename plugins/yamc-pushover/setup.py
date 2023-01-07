@@ -33,15 +33,13 @@ def find_version(*file_paths):
 # setup main
 # required modules
 install_requires = [
-    'yamc-server>=1.0.2',
-    'dms-collector>=2.0.1',
-    'cx-Oracle==8.3.0'
+    'yamc_server>=1.0.2'
 ]
 
 setup(
-    name='yamc-oracle',
-    version=find_version("yamc_oracle", "__init__.py"),
-    description='Oracle providers for yamc',
+    name='yamc-pushover',
+    version=find_version("yamc_pushover", "__init__.py"),
+    description='Pushover writer for yamc',
     long_description=read('README.md'),
     long_description_content_type='text/markdown',
     author='Tomas Vitvar',

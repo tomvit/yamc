@@ -6,13 +6,12 @@ from __future__ import unicode_literals
 
 from .component import BaseComponent
 from .component import WorkerComponent
-from .component import PythonExpression
 
-import yamc.writers 
+import yamc.writers
 import yamc.collectors
 import yamc.providers
 
-#from .config import ColoredFormatter 
+#from .config import ColoredFormatter
 
 from .utils import Map, import_class
 
@@ -31,7 +30,7 @@ def load_components(name, config):
         raise Exception("There are no components of type %s"%name)
     for component_id,component_config in config.config.value(name).items():
         try:
-            clazz = import_class(component_config["class"])  
+            clazz = import_class(component_config["class"])
             component = clazz(config, component_id)
             if component.enabled:
                 components[component_id] = component
@@ -42,8 +41,8 @@ def load_components(name, config):
 def init_scope(config):
     global yamc_scope
     yamc_scope.writers = load_components("writers", config)
-    yamc_scope.collectors=load_components("collectors", config)
     yamc_scope.providers=load_components("providers", config)
+    yamc_scope.collectors=load_components("collectors", config)
     yamc_scope.all_components = list(yamc_scope.writers.values()) + \
         list(yamc_scope.collectors.values()) + list(yamc_scope.providers.values())
     if config.custom_functions is not None:
@@ -54,7 +53,7 @@ def start_components(exit_event):
     for component in yamc_scope.all_components:
         if isinstance(component, WorkerComponent):
             component.start(exit_event)
-    
+
 def join_components():
     for component in yamc_scope.all_components:
         if isinstance(component, WorkerComponent):
@@ -63,4 +62,3 @@ def join_components():
 def destroy_components():
     for component in yamc_scope.all_components:
         component.destroy()
-                

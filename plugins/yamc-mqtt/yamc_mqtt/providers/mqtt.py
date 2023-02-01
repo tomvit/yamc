@@ -13,13 +13,14 @@ from yamc.providers import EventProvider, Event
 from yamc import WorkerComponent
 from yamc.utils import Map
 
+
 class MQTTProvider(EventProvider, WorkerComponent):
-    '''
+    """
     MQTT provider reads events from MQTT broker and uses abstract `yamc.providers.EventProvider`
     and `yamc.providers.Event` interfaces. When an event occurs in MQTT, the `MQTTProvider.on_message` method is
     called which in turn updates the yamc event with the sensor data. The yamc event than pushes the data to all its subscribers.
     The subscribers are of type `yamc.collectors.EventCollector`.
-    '''
+    """
 
     def __init__(self, config, component_id):
         super().__init__(config, component_id)
@@ -68,11 +69,15 @@ class MQTTProvider(EventProvider, WorkerComponent):
             self.client.on_message = self.on_message
             while not exit_event.is_set():
                 try:
-                    self.client.connect(self.address, port=self.port, keepalive=self.keepalive)
+                    self.client.connect(
+                        self.address, port=self.port, keepalive=self.keepalive
+                    )
                     break
                 except Exception as e:
-                    self.log.error(f"Cannot connect to the MQTT broker at {self.address}:{self.port}. {str(e)}. " +
-                        f"Will attemmpt to reconnect after {self.reconnect_after} seconds.")
+                    self.log.error(
+                        f"Cannot connect to the MQTT broker at {self.address}:{self.port}. {str(e)}. "
+                        + f"Will attemmpt to reconnect after {self.reconnect_after} seconds."
+                    )
                     exit_event.wait(self.reconnect_after)
 
     def worker(self, exit_event):

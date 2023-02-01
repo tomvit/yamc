@@ -10,4 +10,5 @@ from .provider import (
     XmlHttpProvider,
     CsvHttpProvider,
     Event,
-    EventProvider)
+    EventProvider,
+)

@@ -12,7 +12,8 @@ import threading
 
 from functools import reduce
 
-class PythonExpression():
+
+class PythonExpression:
     def __init__(self, expr):
         self.expr_str = expr
         self.expr = self.compile()
@@ -27,13 +28,15 @@ class PythonExpression():
         return (self.expr_str, None)
 
     def __setstate__(self, state):
-        self.expr_str,_ = state
-        self.expr=self.compile()
+        self.expr_str, _ = state
+        self.expr = self.compile()
 
     def __str__(self):
-        return "!py %s"%self.expr_str
+        return "!py %s" % self.expr_str
+
 
 MAP_IGNORE_KEY_ERROR = True
+
 
 # *** helper Map object
 class Map(dict):
@@ -77,11 +80,11 @@ class Map(dict):
         super(Map, self).__delitem__(key)
         del self.__dict__[key]
 
-    def to_json(self,encoder=None,exclude=[]):
-        d = { k:v for k,v in self.__dict__.items() if k not in exclude }
-        return json.dumps(d, skipkeys=True,cls=encoder)
+    def to_json(self, encoder=None, exclude=[]):
+        d = {k: v for k, v in self.__dict__.items() if k not in exclude}
+        return json.dumps(d, skipkeys=True, cls=encoder)
 
-    def update(self,map):
+    def update(self, map):
         if isinstance(map, Map):
             self.__dict__.update(map.__dict__)
         if isinstance(map, dict):
@@ -91,7 +94,7 @@ class Map(dict):
         if item == None:
             item = self
         if isinstance(item, dict):
-            for k,v in item.items():
+            for k, v in item.items():
                 if not expand or expand(k):
                     data = self.search(callback, v, expand, callback(k, v, data))
         if isinstance(item, list):
@@ -99,53 +102,64 @@ class Map(dict):
                 data = self.search(callback, v, expand, data)
         return data
 
+
 def deep_eval(data, scope, log=None, raise_ex=False):
     if isinstance(data, dict):
         for key, value in data.items():
             data[key] = deep_eval(value, scope, log, raise_ex)
     elif isinstance(data, list):
-        for inx,x in enumerate(data):
+        for inx, x in enumerate(data):
             data[inx] = deep_eval(x, scope, log, raise_ex)
     elif callable(getattr(data, "eval", None)):
         try:
             data = data.eval(scope)
         except Exception as e:
             if log is not None:
-                log.error("The Python expression failed. %s."%(str(e)))
+                log.error("The Python expression failed. %s." % (str(e)))
             if raise_ex:
                 raise
             else:
                 data = None
     return data
 
+
 def deep_find(dic, keys, default=None, type=None):
-    val=reduce(lambda di,key: di.get(key,default) if isinstance(di, dict) else default, keys.split("."), dic)
+    val = reduce(
+        lambda di, key: di.get(key, default) if isinstance(di, dict) else default,
+        keys.split("."),
+        dic,
+    )
     if val == default:
         return default
     return type(val) if type != None else val
 
+
 def import_class(name):
-    components = name.split('.')
+    components = name.split(".")
     mod = __import__(components[0])
     for comp in components[1:]:
         mod = getattr(mod, comp)
     return mod
 
+
 def randomString(stringLength=10):
-    """Generate a random string of fixed length """
+    """Generate a random string of fixed length"""
     letters = string.ascii_lowercase
-    return ''.join(random.choice(letters) for i in range(stringLength))
+    return "".join(random.choice(letters) for i in range(stringLength))
+
 
 def is_number(s):
-    s=str(s)
-    p = re.compile(r'^[\+\-]?[0-9]*(\.[0-9]+)?$')
-    return s != '' and p.match(s)
+    s = str(s)
+    p = re.compile(r"^[\+\-]?[0-9]*(\.[0-9]+)?$")
+    return s != "" and p.match(s)
+
 
 def perf_counter(counter=None):
     if counter is None:
         return time.perf_counter()
     else:
-        return time.perf_counter()-counter
+        return time.perf_counter() - counter
+
 
 def deep_merge(source, destination):
     for key, value in source.items():
@@ -153,13 +167,18 @@ def deep_merge(source, destination):
             node = destination.setdefault(key, {})
             deep_merge(value, node)
         else:
-            if key in destination and isinstance(destination[key],list) and isinstance(value,list):
+            if (
+                key in destination
+                and isinstance(destination[key], list)
+                and isinstance(value, list)
+            ):
                 for x in value:
                     destination[key].append(x)
             else:
                 if key not in destination:
                     destination[key] = value
     return destination
+
 
 def merge_dicts(*dicts):
     result = {}

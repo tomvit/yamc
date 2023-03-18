@@ -34,12 +34,12 @@ def find_version(*file_paths):
 
 # setup main
 # required modules
-install_requires = ["yamc_server>=1.0.2", "RPi.GPIO==0.7.0"]
+install_requires = ["yamc_server>=1.1.0", "paho-mqtt==1.6.1"]
 
 setup(
-    name="yamc-gpio",
-    version=find_version("yamc_gpio", "__init__.py"),
-    description="GPIO providers for yamc",
+    name="yamc-mqtt",
+    version=find_version("yamc_mqtt", "__init__.py"),
+    description="MQTT providers for yamc",
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
     author="Tomas Vitvar",

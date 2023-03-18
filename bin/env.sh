@@ -1,10 +1,17 @@
 #!/bin/bash
-mdir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && cd ../.. && pwd )
+bdir=$(realpath)
+mdir=$( cd $bdir && cd ../.. && pwd)
 
-. $mdir/yamc/bin/yamc-env/bin/activate 
+if [ ! -f $bdir/yamc-env/bin/activate ]; then
+  echo "ERROR: You must source the env.sh script from the yamc/bin directory and the Python virtual environment must exist!"
+else 
+  . $bdir/yamc-env/bin/activate 
+  export PATH=$PATH:$mdir/yamc/bin
+  export PYTHONPATH=$mdir/yamc
 
-export PATH=$PATH:$mdir/yamc/bin
-
-export PYTHONPATH=$mdir/yamc
-export PYTHONPATH=$PYTHONPATH:$mdir/dms-collector
-export PYTHONPATH=$PYTHONPATH:$mdir/yamc/plugins/yamc-oracle
+  # plugins 
+  export PYTHONPATH=$PYTHONPATH:$mdir/yamc/plugins/yamc-mqtt
+  export PYTHONPATH=$PYTHONPATH:$mdir/yamc/plugins/yamc-pushover
+  #export PYTHONPATH=$PYTHONPATH:$mdir/dms-collector
+  #export PYTHONPATH=$PYTHONPATH:$mdir/yamc/plugins/yamc-oracle
+fi

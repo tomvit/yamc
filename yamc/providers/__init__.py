@@ -4,8 +4,11 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-from .provider import BaseProvider
-from .provider import HttpProvider
-from .provider import XmlHttpProvider
-from .provider import CsvHttpProvider
-
+from .provider import (
+    BaseProvider,
+    HttpProvider,
+    XmlHttpProvider,
+    CsvHttpProvider,
+    Event,
+    EventProvider,
+)

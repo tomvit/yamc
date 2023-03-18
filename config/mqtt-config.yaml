@@ -1,0 +1,91 @@
+# yamc configuration file
+
+# directories
+directories:
+  data: ../data
+  logs: ../logs
+
+# custom python functions that can be used in collectors' python expressions
+# using references defined by keys in the below yaml structure
+custom-functions:
+  _utils: ../etc/custom-functions/utils.py
+
+## list of data writers
+writers:
+  # pushover
+  pushover:
+    class: yamc_pushover.PushoverWriter
+
+    # pushover client token and user token
+    app_token: ${PUSHOVER_APP_TOKEN}
+    user_token: ${PUSHOVER_USER_TOKEN}
+
+    # push notifications will be sent at most every 1 second
+    write_interval: 1
+
+  # csv sensor writer
+  sensor_data_csv:
+    class: yamc.writers.CsvWriter
+    handler:
+      class: logging.handlers.RotatingFileHandler
+      filename: ../data/sensor_data/sensor_data.csv
+      maxBytes: 200000
+      backupCount: 5
+
+## list of data providers
+providers:
+  # mqtt provider
+  mqtt:
+    class: yamc_mqtt.MQTTProvider
+    name: yamc2mqtt
+    address: ${MQTT_BROKER_ADDRESS}
+
+    # topics for this MQTT client provider
+    events:
+      - zigbee2mqtt/door-sensor
+      - zigbee2mqtt/water-leak
+      - zigbee2mqtt/temperature1
+
+# list of collectors
+collectors:
+  door_sensor:
+    class: yamc.collectors.EventCollector
+    source: !py providers.mqtt.select("zigbee2mqtt/door-sensor")
+
+    writers:
+      - writer_id: pushover
+        do_push: !py _utils.handle_error('event.history[-2].contact != event.data.contact', True)
+        message: !py _utils.format("The door is {state}!", state="closed" if event.data.contact else "open")
+
+  temp_sensor:
+    class: yamc.collectors.EventCollector
+    source: !py providers.mqtt.select("zigbee2mqtt/temperature1")
+
+    writers:
+      - writer_id: pushover
+        do_push: !py True
+        message: !py _utils.format("The temperature is {temp}", temp=event.data.temperature)
+
+  all_sensors:
+    class: yamc.collectors.EventCollector
+    source: !py providers.mqtt.select("zigbee2mqtt/.*")
+
+    writers:
+      - writer_id: sensor_data_csv
+        fields:
+          id: !py event.id
+          time: !py event.time
+          battery: !py event.data.battery
+          last_seen: !py event.data.last_seen
+          linkquality: !py event.data.linkquality
+          power_outage_count: !py event.data.power_outage_count
+          voltage: !py event.data.voltage
+
+  low_battery:
+    class: yamc.collectors.EventCollector
+    source: !py providers.mqtt.select("zigbee2mqtt/.*")
+
+    writers:
+      - writer_id: pushover
+        do_push: !py "event.data.battery < 20"
+        message: !py _utils.format("The sensor {id} has low battery ({battery}%)!",id=event.id,battery=event.data.battery)

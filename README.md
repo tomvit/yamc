@@ -57,5 +57,5 @@ In order to setup the development environment for yamc, follow the below steps.
 5. Create toyr configuration file in `${yamc}/config` directory and an environment variable file if your configuration is parametrized. Run the yamc server as follows.
 
    ```
-   $ yamc --config config/mqqt-config.yaml
+   $ yamc --config config/mqtt-config.yaml
    ```

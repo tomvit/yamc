@@ -3,15 +3,13 @@
 
 help:
 	@echo "make <target>"
-	@echo "build	build platformw package in 'dist' directory."
+	@echo "build	build yamc-server."
 	@echo "clean	clean all temporary directories."
+	@echo "plugin   build yamc plugins."
 	@echo ""
 
 build:
 	python setup.py egg_info sdist	
-
-plugins:
-	python plugins/yamc-oracle/setup.py egg_info sdist	
 
 check:
 	pylint yamc 
@@ -21,4 +19,6 @@ clean:
 	rm -fr dist
 	rm -fr yamc/*.egg-info
 
+plugin:
+	bin/build-plugins.sh
 

@@ -14,7 +14,7 @@ In order to setup the development environment for yamc, follow the below steps.
    $ git clone https://github.com/tomvit/yamc
    ```
 
-2. Create a Python virtual python and install required packages. Note that the virtual environment name must be `yamc-env`.
+2. Create a Python virtual environment and install required packages. Note that the virtual environment name must be `yamc-env`.
    ```
    $ cd ${yamc}/bin
    $ python3 -m venv yamc-env
@@ -24,11 +24,11 @@ In order to setup the development environment for yamc, follow the below steps.
 
 3. (optional) If you are using yamc plugins for the Oracle DB and `dms-collector`, you will also need to install the required packages as follows.
 
-  ```
-  $ pip install -r requirements-oracle.txt
-  ```  
+   ```
+   $ pip install -r requirements-oracle.txt
+   ```  
 
-   In additiona, enable the Oracle yamc plugins in `${yamc}/bin/env.sh` by uncommenting the corresponding lines with `PYTHONPATH` environment variable that specify location of the plugins. You will then need to load the `env.sh` again.
+   In addition, enable the Oracle yamc plugins in `${yamc}/bin/env.sh` by uncommenting the corresponding lines with `PYTHONPATH` environment variable that specify location of the plugins. You will then need to load the `env.sh` again.
 
 
 4. Run `yamc` command line.

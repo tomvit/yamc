@@ -70,7 +70,7 @@ optional.add_argument(
     "--show-config",
     required=False,
     default=False,
-    help="Show consolidated configurarion before validation",
+    help="Show consolidated configuration before validation",
     action="store_true",
 )
 

@@ -13,7 +13,7 @@ from yamc import WorkerComponent
 
 class GPIOPulseProvider(BaseProvider, WorkerComponent):
     """
-    GPIO pulse provider that allows to collect pulses from a GPIO channel.
+    GPIO pulse provider that collects pulses from a GPIO channel.
     """
 
     def __init__(self, config, component_id):

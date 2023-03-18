@@ -19,7 +19,7 @@ class MQTTProvider(EventProvider, WorkerComponent):
     MQTT provider reads events from MQTT broker and uses abstract `yamc.providers.EventProvider`
     and `yamc.providers.Event` interfaces. When an event occurs in MQTT, the `MQTTProvider.on_message` method is
     called which in turn updates the yamc event with the sensor data. The yamc event than pushes the data to all its subscribers.
-    The subscribers are of type `yamc.collectors.EventCollector`.
+    The subscribers must be of type `yamc.collectors.EventCollector`.
     """
 
     def __init__(self, config, component_id):

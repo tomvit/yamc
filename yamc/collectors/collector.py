@@ -32,6 +32,10 @@ class BaseCollector(WorkerComponent):
         # read writer configurations for this this collector
         # the writer objects will be later provided in set_writers method
         for w in self.config.value("writers", default=[]):
+            if w["writer_id"] not in yamc_scope.writers.keys():
+                self.log.warn(
+                    f"The writer with id {w['writer_id']} does not exist. The collector will not write data using this writer definition!"
+                )
             self.writers[w["writer_id"]] = {
                 k: v for k, v in w.items() if k != "writer_id"
             }

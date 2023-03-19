@@ -36,7 +36,7 @@ install_requires = [
     'influxdb==5.3.1',
     'croniter==1.1.0',
     'unidecode==1.3.2',
-    'lxml==4.7.1',
+    'lxml==4.9.1',
     'pyyaml==6.0']
 
 setup(

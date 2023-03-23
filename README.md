@@ -30,32 +30,14 @@ In order to setup the development environment for yamc, follow the below steps.
 
    In addition, enable the Oracle yamc plugins in `${yamc}/bin/env.sh` by uncommenting the corresponding lines with `PYTHONPATH` environment variable that specify location of the plugins. You will then need to load the `env.sh` again.
 
+## Usage
 
-4. Run `yamc` command line.
+`yamc` is a CLI utility that provides various commands to run and define configurations for providers, collectors and writers.
 
-   ```
-   $ yamc --help
-   usage: yamc [-h] --config <file> [--env <file>] [--test]  
-   [--show-config] [--debug | --trace]
+You can run `yamc` using `run` command with your configuration file as follows.
 
-   Yet another metric collector
+The below example show how you can run `yamc` using the configuration file `config/mqtt-config.yaml`. If your configuration file is parametrized, you can use `--env` option to specify your environment varialbe file.
 
-   optional arguments:
-     -h, --help       show this help message and exit
-
-   required arguments:
-     --config <file>  Configuration file
-
-   other optional arguments:
-     --env <file>     Environment variables file
-     --test           Run in the test mode with disabled writing activities
-     --show-config    Show consolidated configuration before validation
-     --debug          Print debug details in the log
-     --trace          Print even more details in the log
-   ```
-
-5. Create toyr configuration file in `${yamc}/config` directory and an environment variable file if your configuration is parametrized. Run the yamc server as follows.
-
-   ```
-   $ yamc --config config/mqtt-config.yaml
-   ```
+```
+$ yamc run --config config/mqtt-config.yaml
+```

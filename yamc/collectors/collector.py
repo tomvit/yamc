@@ -146,7 +146,7 @@ class CronCollector(BaseCollector):
                 except Exception as e:
                     self.log.error(
                         "The job failed due to %s" % (str(e)),
-                        exc_info=self.args.debug or self.args.trace,
+                        exc_info=self.base_config.debug,
                     )
                 time2sleep = self.get_time_to_sleep(itr)
 

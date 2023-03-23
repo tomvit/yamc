@@ -73,7 +73,6 @@ class InfluxDBWriter(Writer):
                 log.warn("There are no fields in the data point %s!" % str(point))
             points.append(point)
 
-        self.log.trace("Writing data points: " + str(points))
         try:
             self.client.write_points(points)
         except Exception as e:

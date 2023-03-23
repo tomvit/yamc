@@ -45,6 +45,7 @@ providers:
       - zigbee2mqtt/door-sensor
       - zigbee2mqtt/water-leak
       - zigbee2mqtt/temperature1
+      - zigbee2mqtt/kettle
 
 # list of collectors
 collectors:
@@ -65,6 +66,14 @@ collectors:
       - writer_id: pushover
         do_push: !py True
         message: !py _utils.format("The temperature is {temp}", temp=event.data.temperature)
+
+  kettle:
+    class: yamc.collectors.EventCollector
+    source: !py providers.mqtt.select("zigbee2mqtt/kettle")
+
+    writers:
+      - writer_id: __logger
+        message: !py json.dumps(event.data)
 
   all_sensors:
     class: yamc.collectors.EventCollector
@@ -87,5 +96,5 @@ collectors:
 
     writers:
       - writer_id: pushover
-        do_push: !py "event.data.battery < 20"
+        do_push: !py "event.data.battery is not None and event.data.battery < 20"
         message: !py _utils.format("The sensor {id} has low battery ({battery}%)!",id=event.id,battery=event.data.battery)

@@ -29,10 +29,13 @@ ENVPARAM_PATTERN = "\$\{%s\}" % ENVNAME_PATTERN
 # consolidated variables supplied via env file and environment variables
 ENV = {}
 
+DEBUG = False
+ANSI_COLORS = True
+
 
 def get_dir_path(config_dir, path, base_dir=None, check=False):
     """
-    Returns the directory for the path specified.
+    Return the directory for the path specified.
     """
     d = os.path.normpath(
         (
@@ -49,7 +52,7 @@ def get_dir_path(config_dir, path, base_dir=None, check=False):
 
 def read_raw_config(config_file, env_file):
     """
-    Reads the raw configuration file by processing config `include` instructions and
+    Read the raw configuration file by processing config `include` instructions and
     populating `defaults` to `providers`, `collectors` and `writers`. This is a wrapper function
     for the function `read_complex_config`.
     """
@@ -79,7 +82,7 @@ def read_raw_config(config_file, env_file):
 
 def read_complex_config(file):
     """
-    Reads complex configuration file by processing `include` instructions.
+    Read complex configuration file by processing `include` instructions.
     """
 
     def _read_yaml(config_file):
@@ -117,7 +120,7 @@ def read_complex_config(file):
 
 def add_defaults(config, component_name):
     """
-    Adds defaults settings to individual `providers`, `collectors` and `writers`.
+    Add defaults settings to individual `providers`, `collectors` and `writers`.
     """
     collectors_defaults = deep_find(config, f"defaults.{component_name}", default=[])
     for cdef in collectors_defaults:
@@ -132,7 +135,7 @@ def add_defaults(config, component_name):
 
 def init_env(env_file, sep="=", comment="#"):
     """
-    Reads environment varialbes from the `env_file` and combines them with the OS environment variables.
+    Read environment varialbes from the `env_file` and combines them with the OS environment variables.
     """
     env = {}
     for k, v in os.environ.items():
@@ -193,21 +196,20 @@ class Config:
     `collectors` and `writers` configurations.
     """
 
-    def __init__(self, file, args):
+    def __init__(self, file, env, test, log_level="INFO"):
         """
-        Reads and parses the configuration from the yaml file and initializes the logging.
+        Read and parse the configuration from the yaml file and initializes the logging.
         """
         self.collectors = {}
         self.writers = {}
         self.providers = {}
-        self.args = args
+        self.test = test
+        self.log_level = log_level
 
         if not (os.path.exists(file)):
             raise Exception(f"The configuration file {file} does not exist!")
 
-        self.raw_config, self.config_file, self.config_dir = read_raw_config(
-            self.args.config, self.args.env
-        )
+        self.raw_config, self.config_file, self.config_dir = read_raw_config(file, env)
         self.logs_dir, self.logs_level = self.init_logging(
             deep_find(self.raw_config, "directories.logs", default="../logs")
         )
@@ -215,7 +217,7 @@ class Config:
 
     def init_config(self):
         """
-        Creates the main configuration object and loads the custom functions' modules.
+        Create the main configuration object and loads the custom functions' modules.
         """
         self.config = ConfigPart(None, None, self.raw_config, self.config_dir)
         self.data_dir = self.get_dir_path(
@@ -223,7 +225,7 @@ class Config:
         )
         os.makedirs(self.data_dir, exist_ok=True)
 
-        if self.args.test:
+        if self.test:
             self.log.info(
                 "Running in test mode, the log output will be in console only."
             )
@@ -248,7 +250,7 @@ class Config:
 
     def init_logging(self, logs_dir):
         """
-        Initializes the logging, sets the log level and logging directory. It also
+        Initialize the logging, sets the log level and logging directory. It also
         adds a custom 'TRACE' logging level.
         """
         # custom TRACE logging level
@@ -258,16 +260,9 @@ class Config:
         logs_dir = self.get_dir_path(logs_dir)
         os.makedirs(logs_dir, exist_ok=True)
 
-        # log level
-        log_level = "INFO"
-        if self.args.trace:
-            log_level = "TRACE"
-        elif self.args.debug:
-            log_level = "DEBUG"
-
         # log handlers
         log_handlers = ["file", "console"]
-        if self.args.test:
+        if self.test:
             log_handlers = ["console"]
 
         # main logs configuration
@@ -300,23 +295,23 @@ class Config:
                 "loggers": {
                     "": {  # all loggers
                         "handlers": log_handlers,
-                        "level": f"{log_level}",
+                        "level": f"{self.log_level}",
                         "propagate": False,
                     }
                 },
             }
         )
-        return logs_dir, log_level
+        return logs_dir, self.log_level
 
     def get_dir_path(self, path, base_dir=None, check=False):
         """
-        Returns the full directory of the path with `config_dir` as the base directory.
+        Return the full directory of the path with `config_dir` as the base directory.
         """
         return get_dir_path(self.config_dir, path, base_dir, check)
 
     def collector(self, collector_id):
         """
-        Returns a `ConfigPart` object for a collector with `collector_id`
+        Return a `ConfigPart` object for a collector with `collector_id`
         """
         if collector_id not in self.collectors:
             self.collectors[collector_id] = ConfigPart(
@@ -329,7 +324,7 @@ class Config:
 
     def writer(self, writer_id):
         """
-        Returns a `ConfigPart` object for a writer with `writer_id`
+        Return a `ConfigPart` object for a writer with `writer_id`
         """
         if writer_id not in self.writers:
             self.writers[writer_id] = ConfigPart(
@@ -339,7 +334,7 @@ class Config:
 
     def provider(self, provider_id):
         """
-        Returns a `ConfigPart` object for a provider with `provider_id`
+        Return a `ConfigPart` object for a provider with `provider_id`
         """
         if provider_id not in self.providers:
             self.providers[provider_id] = ConfigPart(

@@ -37,6 +37,7 @@ install_requires = [
     'croniter==1.1.0',
     'unidecode==1.3.2',
     'lxml==4.7.1',
+    'click==8.1.3',
     'pyyaml==6.0']
 
 setup(

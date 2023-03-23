@@ -16,7 +16,6 @@ class BaseComponent:
         self.base_config = config
         self.component_id = component_id
         self.log = logging.getLogger("%s" % (component_id))
-        self.args = config.args
         self.enabled = True
 
     def base_scope(self, custom_scope=None):

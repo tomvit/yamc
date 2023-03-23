@@ -96,7 +96,7 @@ class Writer(WorkerComponent):
                         "Writing the batch, batch-size=%d, queue-size=%d."
                         % (len(batch), self.queue.qsize())
                     )
-                    if not self.args.test:
+                    if not self.base_config.test:
                         self.do_write(batch)
                     else:
                         self.log.info(
@@ -106,7 +106,7 @@ class Writer(WorkerComponent):
                     self.log.error(
                         "Cannot write the batch due to writer's problem: %s. The batch will be stored in the backlog."
                         % (str(e)),
-                        exc_info=self.args.debug or self.args.trace,
+                        exc_info=self.base_config.debug,
                     )
                     self._is_healthy = False
                     self.backlog.put(batch)
@@ -114,7 +114,7 @@ class Writer(WorkerComponent):
                     self.log.error(
                         "Cannot write the batch. It will be discarded due to the following error: %s"
                         % (str(e)),
-                        exc_info=self.args.debug or self.args.trace,
+                        exc_info=self.base_config.debug,
                     )
 
         while not exit_event.is_set():
@@ -164,7 +164,7 @@ class Backlog:
         self.all_files = files
 
     def put(self, items):
-        if self.writer.args.test:
+        if self.writer.base_config.test:
             self.log.info("Running in test mode, the backlog item will not be created")
         else:
             file = "items_%s.data" % randomString()
@@ -185,7 +185,7 @@ class Backlog:
         return files, data
 
     def remove(self, files):
-        if not self.writer.args.test:
+        if not self.writer.base_config.test:
             for file in files:
                 os.remove(os.path.join(self.backlog_dir, file))
         else:
@@ -210,7 +210,7 @@ class Backlog:
             while self.size() > 0:
                 batch_files, batch = self.peek(self.writer.batch_size)
                 try:
-                    if not self.writer.args.test:
+                    if not self.writer.base_config.test:
                         self.writer.do_write(batch)
                     else:
                         self.log.info(
@@ -221,7 +221,7 @@ class Backlog:
                     self.log.error(
                         "Cannot write item from the writer's backlog due to: %s"
                         % (str(e)),
-                        exc_info=self.writer.args.debug or self.writer.args.trace,
+                        exc_info=self.writer.base_config.debug,
                     )
                     self.writer._is_healthy = False
                     break

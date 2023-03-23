@@ -19,6 +19,9 @@ clean:
 	rm -fr dist
 	rm -fr yamc/*.egg-info
 
+format:
+	black yamc
+
 plugin:
 	bin/build-plugins.sh
 

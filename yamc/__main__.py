@@ -19,7 +19,7 @@ try:
     yamc(prog_name="yamc")
 except Exception as e:
     log.error(f"ERROR: {str(e)}")
-    if config.DEBUG or True:
+    if config.DEBUG:
         print("---")
         traceback.print_exc()
         print("---")

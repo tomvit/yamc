@@ -9,6 +9,7 @@ import click
 from .run import run
 from .plugin import plugin
 
+import yamc.config as config
 
 @click.group()
 @click.option(

@@ -36,7 +36,7 @@ In order to setup the development environment for yamc, follow the below steps.
 
 You can run `yamc` using `run` command with your configuration file as follows.
 
-The below example show how you can run `yamc` using the configuration file `config/mqtt-config.yaml`. If your configuration file is parametrized, you can use `--env` option to specify your environment varialbe file.
+The below example shows how you can run `yamc` using the configuration file `config/mqtt-config.yaml`. If your configuration file is parametrized, you can use `--env` option to specify your environment varialbe file.
 
 ```
 $ yamc run --config config/mqtt-config.yaml

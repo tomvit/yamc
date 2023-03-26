@@ -15,7 +15,7 @@ import pickle
 
 from queue import Queue
 from yamc.utils import Map, randomString
-from yamc import WorkerComponent
+from yamc.component import WorkerComponent
 
 
 class HealthCheckException(Exception):

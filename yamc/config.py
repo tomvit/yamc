@@ -13,6 +13,8 @@ import re
 import warnings
 import json
 
+from threading import Event
+
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 import imp
@@ -20,7 +22,6 @@ import imp
 from .utils import PythonExpression
 from .utils import deep_find, import_class, Map, deep_merge, merge_dicts
 from functools import reduce
-from yamc import yamc_scope
 
 # they must be in a form ${VARIABLE_NAME}
 ENVNAME_PATTERN = "[A-Z0-9_]+"
@@ -31,6 +32,9 @@ ENV = {}
 
 DEBUG = False
 ANSI_COLORS = True
+
+# global exit event
+exit_event = Event()
 
 
 def get_dir_path(config_dir, path, base_dir=None, check=False):
@@ -205,6 +209,9 @@ class Config:
         self.providers = {}
         self.test = test
         self.log_level = log_level
+        self.scope = Map(
+            writers=None, collectors=None, providers=None, all_components=[]
+        )
 
         if not (os.path.exists(file)):
             raise Exception(f"The configuration file {file} does not exist!")
@@ -217,9 +224,27 @@ class Config:
 
     def init_config(self):
         """
-        Create the main configuration object and loads the custom functions' modules.
+        Create the main configuration object, load the custom functions' modules and
+        initialize the yamc scope.
         """
-        self.config = ConfigPart(None, None, self.raw_config, self.config_dir)
+
+        def __load_components(name):
+            components = Map()
+            if self.config.value(name) is None:
+                raise Exception("There are no components of type %s" % name)
+            for component_id, component_config in self.config.value(name).items():
+                try:
+                    clazz = import_class(component_config["class"])
+                    component = clazz(self, component_id)
+                    if component.enabled:
+                        components[component_id] = component
+                except Exception as e:
+                    raise Exception(
+                        "Cannot load component '%s'. %s" % (component_id, str(e))
+                    )
+            return components
+
+        self.config = ConfigPart(self, None, self.raw_config, self.config_dir)
         self.data_dir = self.get_dir_path(
             self.config.value("directories.data", default="../data")
         )
@@ -230,7 +255,7 @@ class Config:
                 "Running in test mode, the log output will be in console only."
             )
 
-        # load custom functions if they exist
+        # load custom functions
         from inspect import getmembers, isfunction
 
         self.custom_functions = {}
@@ -248,14 +273,24 @@ class Config:
                 {x[0]: x[1] for x in getmembers(module, isfunction)}
             )
 
+        # initialize scope
+        self.log.info("Initializing scope.")
+        self.scope.writers = __load_components("writers")
+        self.scope.providers = __load_components("providers")
+        self.scope.collectors = __load_components("collectors")
+        self.scope.all_components = (
+            list(self.scope.writers.values())
+            + list(self.scope.collectors.values())
+            + list(self.scope.providers.values())
+        )
+        if self.custom_functions is not None:
+            for k, v in self.custom_functions.items():
+                self.scope[k] = v
+
     def init_logging(self, logs_dir):
         """
-        Initialize the logging, sets the log level and logging directory. It also
-        adds a custom 'TRACE' logging level.
+        Initialize the logging, sets the log level and logging directory.
         """
-        # custom TRACE logging level
-        addLoggingLevel("TRACE", logging.DEBUG - 5)
-
         # logs directory
         logs_dir = self.get_dir_path(logs_dir)
         os.makedirs(logs_dir, exist_ok=True)
@@ -376,10 +411,10 @@ class ConfigPart:
                 if not no_eval:
                     if callable(getattr(val, "eval", None)):
                         try:
-                            from yamc import yamc_scope
-
                             val = val.eval(
-                                merge_dicts(self.parent.custom_functions, yamc_scope)
+                                merge_dicts(
+                                    self.parent.custom_functions, self.parent.scope
+                                )
                             )
                         except Exception as e:
                             raise Exception(
@@ -439,54 +474,3 @@ class ColoredFormatter(logging.Formatter):
         log_fmt = self.FORMATS.get(record.levelno)
         formatter = logging.Formatter(log_fmt)
         return formatter.format(record)
-
-
-# from https://stackoverflow.com/questions/2183233/how-to-add-a-custom-loglevel-to-pythons-logging-facility/35804945#35804945
-def addLoggingLevel(levelName, levelNum, methodName=None):
-    """
-    Comprehensively adds a new logging level to the `logging` module and the
-    currently configured logging class.
-
-    `levelName` becomes an attribute of the `logging` module with the value
-    `levelNum`. `methodName` becomes a convenience method for both `logging`
-    itself and the class returned by `logging.getLoggerClass()` (usually just
-    `logging.Logger`). If `methodName` is not specified, `levelName.lower()` is
-    used.
-
-    To avoid accidental clobberings of existing attributes, this method will
-    raise an `AttributeError` if the level name is already an attribute of the
-    `logging` module or if the method name is already present
-
-    Example
-    -------
-    >>> addLoggingLevel('TRACE', logging.DEBUG - 5)
-    >>> logging.getLogger(__name__).setLevel("TRACE")
-    >>> logging.getLogger(__name__).trace('that worked')
-    >>> logging.trace('so did this')
-    >>> logging.TRACE
-    5
-    """
-    if not methodName:
-        methodName = levelName.lower()
-
-    if hasattr(logging, levelName):
-        raise AttributeError("{} already defined in logging module".format(levelName))
-    if hasattr(logging, methodName):
-        raise AttributeError("{} already defined in logging module".format(methodName))
-    if hasattr(logging.getLoggerClass(), methodName):
-        raise AttributeError("{} already defined in logger class".format(methodName))
-
-    # This method was inspired by the answers to Stack Overflow post
-    # http://stackoverflow.com/q/2183233/2988730, especially
-    # http://stackoverflow.com/a/13638084/2988730
-    def logForLevel(self, message, *args, **kwargs):
-        if self.isEnabledFor(levelNum):
-            self._log(levelNum, message, args, **kwargs)
-
-    def logToRoot(message, *args, **kwargs):
-        logging.log(levelNum, message, *args, **kwargs)
-
-    logging.addLevelName(levelNum, levelName)
-    setattr(logging, levelName, levelNum)
-    setattr(logging.getLoggerClass(), methodName, logForLevel)
-    setattr(logging, methodName, logToRoot)

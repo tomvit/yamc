@@ -19,9 +19,9 @@ class BaseComponent:
         self.enabled = True
 
     def base_scope(self, custom_scope=None):
-        from yamc import yamc_scope
-
-        return merge_dicts(yamc_scope, self.base_config.custom_functions, custom_scope)
+        return merge_dicts(
+            self.base_config.scope, self.base_config.custom_functions, custom_scope
+        )
 
     def destroy(self):
         pass

@@ -10,7 +10,7 @@ import json
 import paho.mqtt.client as mqtt
 
 from yamc.providers import EventProvider, Event
-from yamc import WorkerComponent
+from yamc.component import WorkerComponent
 from yamc.utils import Map
 
 

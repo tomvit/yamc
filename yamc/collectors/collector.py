@@ -11,15 +11,13 @@ import sys
 import copy
 
 from datetime import datetime
-from yamc import WorkerComponent
+from yamc.component import WorkerComponent
 from yamc.utils import Map, deep_eval, merge_dicts
 
 
 class BaseCollector(WorkerComponent):
     def __init__(self, config, component_id):
-        from yamc import yamc_scope
-
-        if yamc_scope.writers is None:
+        if config.scope.writers is None:
             raise Exception(
                 "CRITICAL: There are no writers! Have you loaded writers before collectors?"
             )
@@ -32,7 +30,7 @@ class BaseCollector(WorkerComponent):
         # read writer configurations for this this collector
         # the writer objects will be later provided in set_writers method
         for w in self.config.value("writers", default=[]):
-            if w["writer_id"] not in yamc_scope.writers.keys():
+            if w["writer_id"] not in config.writers.keys():
                 self.log.warn(
                     f"The writer with id {w['writer_id']} does not exist. The collector will not write data using this writer definition!"
                 )
@@ -41,7 +39,7 @@ class BaseCollector(WorkerComponent):
             }
             self.writers[w["writer_id"]]["__writer"] = None
 
-        for w in yamc_scope.writers.values():
+        for w in config.scope.writers.values():
             if w.component_id in self.writers.keys():
                 self.writers[w.component_id]["__writer"] = w
 

@@ -11,7 +11,7 @@ import threading
 import unidecode
 
 from lxml import etree
-from yamc import BaseComponent
+from yamc.component import BaseComponent
 
 from enum import Enum
 

@@ -11,6 +11,7 @@ from .plugin import plugin
 
 import yamc.config as config
 
+
 @click.group()
 @click.option(
     "--no-ansi", "no_ansi", is_flag=True, default=False, help="Do not use ANSI colors"

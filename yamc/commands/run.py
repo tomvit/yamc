@@ -22,6 +22,7 @@ import click
 
 @click.command("run", help="Run command.")
 @click.option(
+    "-c",
     "--config",
     "config",
     metavar="<file>",
@@ -30,6 +31,7 @@ import click
     help="Configuration file",
 )
 @click.option(
+    "-e",
     "--env",
     "env",
     metavar="<file>",

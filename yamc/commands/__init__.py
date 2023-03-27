@@ -9,7 +9,7 @@ import click
 from .run import run
 from .plugin import plugin
 
-import yamc.config as config
+import yamc.config as yamc_config
 
 
 @click.group()
@@ -21,9 +21,9 @@ import yamc.config as config
 )
 def yamc(no_ansi, debug):
     if no_ansi:
-        config.ANSI_COLORS = False
+        yamc_config.ANSI_COLORS = False
     if debug:
-        config.DEBUG = True
+        yamc_config.DEBUG = True
 
 
 yamc.add_command(run)

@@ -14,10 +14,15 @@ from yamc.commands import yamc
 
 
 def signal_quit(signal, frame):
+    """
+    Function called when process ends when any signal is received. The function
+    sets the `exit_event` so that all worker threads using the event can gracefully end.
+    """
     log.info("Received signal %d" % signal)
     yamc_config.exit_event.set()
 
 
+# register `signal_quit` function for all signals.
 for sig in ("TERM", "HUP", "INT"):
     signal.signal(getattr(signal, "SIG" + sig), signal_quit)
 

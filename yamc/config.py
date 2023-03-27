@@ -161,6 +161,10 @@ def init_env(env_file, sep="=", comment="#"):
 
 
 def replace_env_variable(value):
+    """
+    Replace all environment varaibles in a string privided in `value` parameter
+    with values of variable in `ENV` global variable.
+    """
     params = list(set(re.findall("(%s)" % ENVPARAM_PATTERN, value)))
     if len(params) > 0:
         for k in params:
@@ -291,7 +295,7 @@ class Config:
 
     def init_logging(self, logs_dir):
         """
-        Initialize the logging, sets the log level and logging directory.
+        Initialize the logging, set the log level and logging directory.
         """
         # logs directory
         logs_dir = self.get_dir_path(logs_dir)
@@ -455,7 +459,7 @@ class ConfigPart:
         return self.value(path, default=default, type=bool, required=required)
 
 
-class ColoredFormatter(logging.Formatter):
+class CustomFormatter(logging.Formatter):
     grey = "\x1b[38;20m"
     yellow = "\x1b[33;20m"
     red = "\x1b[31;20m"

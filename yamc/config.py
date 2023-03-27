@@ -23,6 +23,8 @@ from .utils import PythonExpression
 from .utils import deep_find, import_class, Map, deep_merge, merge_dicts
 from functools import reduce
 
+import yamc.config as yamc_config
+
 # they must be in a form ${VARIABLE_NAME}
 ENVNAME_PATTERN = "[A-Z0-9_]+"
 ENVPARAM_PATTERN = "\$\{%s\}" % ENVNAME_PATTERN
@@ -307,14 +309,14 @@ class Config:
                 "disable_existing_loggers": True,
                 "formatters": {
                     "standard": {
-                        "format": ColoredFormatter.format_header
-                        + ColoredFormatter.format_msg
+                        "format": CustomFormatter.format_header
+                        + CustomFormatter.format_msg
                     },
-                    "colored": {"()": ColoredFormatter},
+                    "colored": {"()": CustomFormatter},
                 },
                 "handlers": {
                     "console": {
-                        "formatter": "colored",
+                        "formatter": "colored" if yamc_config.ANSI_COLORS else "standard",
                         "class": "logging.StreamHandler",
                         "stream": "ext://sys.stdout",  # Default is stderr
                     },

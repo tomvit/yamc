@@ -6,4 +6,4 @@ from __future__ import unicode_literals
 
 from .writers import PushoverWriter
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"

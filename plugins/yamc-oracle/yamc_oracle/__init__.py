@@ -7,4 +7,4 @@ from __future__ import unicode_literals
 from .providers import DmsProvider
 from .providers import OraDBProvider
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"

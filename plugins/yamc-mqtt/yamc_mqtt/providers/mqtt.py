@@ -9,17 +9,17 @@ import json
 
 import paho.mqtt.client as mqtt
 
-from yamc.providers import EventProvider, Event
+from yamc.providers import EventProvider, Topic
 from yamc.component import WorkerComponent
 from yamc.utils import Map
 
 
 class MQTTProvider(EventProvider, WorkerComponent):
     """
-    MQTT provider reads events from MQTT broker and uses abstract `yamc.providers.EventProvider`
-    and `yamc.providers.Event` interfaces. When an event occurs in MQTT, the `MQTTProvider.on_message` method is
-    called which in turn updates the yamc event with the sensor data. The yamc event than pushes the data to all its subscribers.
-    The subscribers must be of type `yamc.collectors.EventCollector`.
+    MQTT provider reads topics from the MQTT broker and implements abstract classes `yamc.providers.EventProvider`
+    and `yamc.providers.Topic`. When an event occurs in the broker, the `MQTTProvider.on_message` method is
+    called which in turn updates the topic with the event data of the sensor. The yamc topic than pushes
+    the event data to all its subscribers. The subscribers must be of type `yamc.collectors.EventCollector`.
     """
 
     def __init__(self, config, component_id):
@@ -36,9 +36,9 @@ class MQTTProvider(EventProvider, WorkerComponent):
     def on_connect(self, client, userdata, flags, rc):
         self.connected = True
         self.log.info(f"Connected to the MQTT broker at {self.address}:{self.port}")
-        for event_id in self.events:
-            self.log.info(f"Subscribing to the topic {event_id}")
-            self.client.subscribe(event_id)
+        for topic_id in self.topics:
+            self.log.info(f"Subscribing to the topic {topic_id}")
+            self.client.subscribe(topic_id)
 
     def on_disconnect(self, client, userdata, rc):
         self.log.info(f"Disconnected from the MQTT broker.")
@@ -48,13 +48,13 @@ class MQTTProvider(EventProvider, WorkerComponent):
 
     def on_message(self, client, userdata, message):
         try:
-            topic = message._topic.decode("utf-8")
-            self.log.info(f"Received on_message for topic {topic}")
-            event = self.select_one(topic)
-            if event:
+            topic_id = message._topic.decode("utf-8")
+            self.log.info(f"Received on_message for topic {topic_id}")
+            topic = self.select_one(topic_id)
+            if topic:
                 data = Map(json.loads(str(message.payload.decode("utf-8"))))
                 self.log.debug("The data is: " + str(data))
-                event.update(data)
+                topic.update(data)
         except Exception as e:
             self.log.error(str(e))
 

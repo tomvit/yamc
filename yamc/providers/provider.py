@@ -247,19 +247,19 @@ class CsvHttpProvider(HttpProvider):
                 return _int_or_float_or_str(self.lines[row_inx][col_inx])
 
 
-class Event:
+class Topic:
     """
-    Event object provides a link between a specific pub/sub mechanism (such as MQTT)
+    Topic object provides a link between a specific pub/sub mechanism (such as MQTT)
     and yamc providers and collectors.
     """
 
-    def __init__(self, id, event_provider):
+    def __init__(self, id, provider):
         self.id = id
         self.time = 0
         self.data = None
         self.callbacks = []
         self.history = []
-        self.provider = event_provider
+        self.provider = provider
 
     def update(self, data):
         self.time = time.time()
@@ -280,50 +280,50 @@ class EventProvider(BaseProvider):
 
     def __init__(self, config, component_id):
         super().__init__(config, component_id)
-        self.events = Map()
-        for e in self.config.value("events"):
-            self.add_event(e)
+        self.topics = Map()
+        for topic_id in self.config.value("topics"):
+            self.add_topic(topic_id)
 
-    def add_event(self, event_id):
-        if self.events.get(event_id) is not None:
-            raise Exception(f"The event with id {event_id} already exists!")
-        self.events[event_id] = self.create_event(event_id)
+    def add_topic(self, topic_id):
+        if self.topics.get(topic_id) is not None:
+            raise Exception(f"The topic with id {topic_id} already exists!")
+        self.topics[topic_id] = self.create_topic(topic_id)
 
-    def create_event(self, event_id):
-        return Event(event_id, self)
+    def create_topic(self, topic_id):
+        return Topic(topic_id, self)
 
     def select(self, *ids, silent=False):
         sources = []
         for id in ids:
             found = False
-            e = self.events.get(id)
-            if e is not None:
-                sources.append(e)
+            topic = self.topics.get(id)
+            if topic is not None:
+                sources.append(topic)
                 found = True
             else:
-                for k, v in self.events.items():
+                for k, v in self.topics.items():
                     if re.match(id, k):
                         found = True
                         if v not in sources:
                             sources.append(v)
             if not found and not silent:
-                self.log.warn(f"The event with pattern '{id}' cannot be found!")
+                self.log.warn(f"The topic with pattern '{id}' cannot be found!")
         return sources
 
     def select_one(self, id):
-        events = self.select(id, silent=True)
-        if len(events) > 0:
-            return events[0]
+        topics = self.select(id, silent=True)
+        if len(topics) > 0:
+            return topics[0]
         else:
             return None
 
-    def update(self, event=None):
+    def update(self, topic=None):
         self._updated_time = time.time()
         if self.data is None:
             self.data = Map()
-        if event is None:
-            for e in self.events.values():
-                self.data[e.id] = Map(time=e.time, data=e.data)
+        if topic is None:
+            for topic in self.topics.values():
+                self.data[topic.id] = Map(time=topic.time, data=topic.data)
         else:
-            self.data[event.id] = Map(time=event.time, data=event.data)
+            self.data[topic.id] = Map(time=topic.time, data=topic.data)
         return True

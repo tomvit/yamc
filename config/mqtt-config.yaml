@@ -41,7 +41,7 @@ providers:
     address: ${MQTT_BROKER_ADDRESS}
 
     # topics for this MQTT client provider
-    events:
+    topics:
       - zigbee2mqtt/door-sensor
       - zigbee2mqtt/water-leak
       - zigbee2mqtt/temperature1

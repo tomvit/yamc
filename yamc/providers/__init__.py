@@ -9,6 +9,6 @@ from .provider import (
     HttpProvider,
     XmlHttpProvider,
     CsvHttpProvider,
-    Event,
+    Topic,
     EventProvider,
 )

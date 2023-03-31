@@ -32,6 +32,11 @@ writers:
       maxBytes: 200000
       backupCount: 5
 
+  # state machine
+  state1:
+    class: yamc.writers.StateWriter
+    name: state1
+
 ## list of data providers
 providers:
   # mqtt provider
@@ -42,59 +47,97 @@ providers:
 
     # topics for this MQTT client provider
     topics:
-      - zigbee2mqtt/door-sensor
-      - zigbee2mqtt/water-leak
-      - zigbee2mqtt/temperature1
-      - zigbee2mqtt/kettle
+    - zigbee2mqtt/door-sensor
+    - zigbee2mqtt/water-leak
+    - zigbee2mqtt/temperature1
+    - zigbee2mqtt/kettle
+
+  state1:
+    class: yamc.providers.StateProvider
+    name: state1
+
+    topics:
+    - timer/kettle
+    - door/state
 
 # list of collectors
 collectors:
   door_sensor:
     class: yamc.collectors.EventCollector
-    source: !py providers.mqtt.select("zigbee2mqtt/door-sensor")
+    source: !py providers.mqtt.select("zigbee2mqtt/door-sensor") + providers.state1.select("door/state")
 
     writers:
-      - writer_id: pushover
-        do_push: !py _utils.handle_error('event.history[-2].contact != event.data.contact', True)
-        message: !py _utils.format("The door is {state}!", state="closed" if event.data.contact else "open")
+    - writer_id: state1
+      def:
+      - if: !py event.topic_id == 'zigbee2mqtt/door-sensor'
+        def:
+        - if: !py event.data.contact == False and providers.state1.value('door.state') != 'open'
+          door:
+            state: 'open'
+        - if: !py event.data.contact == True and providers.state1.value('door.state') != 'closed'
+          door:
+            state: 'closed'
+    - writer_id: pushover
+      def:
+      - if: !py event.topic_id == 'door/state'
+        message: !py _utils.format("The door is {state}!", state=event.data)
 
   temp_sensor:
     class: yamc.collectors.EventCollector
     source: !py providers.mqtt.select("zigbee2mqtt/temperature1")
 
     writers:
-      - writer_id: pushover
-        do_push: !py True
+    - writer_id: pushover
+      def:
         message: !py _utils.format("The temperature is {temp}", temp=event.data.temperature)
 
   kettle:
     class: yamc.collectors.EventCollector
-    source: !py providers.mqtt.select("zigbee2mqtt/kettle")
+    source: !py providers.mqtt.select("zigbee2mqtt/kettle") + providers.state1.select("timer/kettle")
 
     writers:
-      - writer_id: __logger
-        message: !py json.dumps(event.data)
+    - writer_id: state1
+      def:
+      - if: !py event.topic_id == 'zigbee2mqtt/kettle'
+        def:
+        - if: !py event.data.state == 'ON'
+          kettle:
+            state: 'ON'
+          timer:
+            kettle:
+              value: 5
+        - if: !py event.data.state == 'OFF'
+          kettle:
+            state: 'OFF'
+          timer:
+            kettle:
+              value: 0
+    - writer_id: pushover
+      def:
+      - if: !py event.topic_id == 'timer/kettle'
+        message: "Hey there"
 
   all_sensors:
     class: yamc.collectors.EventCollector
     source: !py providers.mqtt.select("zigbee2mqtt/.*")
 
     writers:
-      - writer_id: sensor_data_csv
-        fields:
-          id: !py event.id
-          time: !py event.time
-          battery: !py event.data.battery
-          last_seen: !py event.data.last_seen
-          linkquality: !py event.data.linkquality
-          power_outage_count: !py event.data.power_outage_count
-          voltage: !py event.data.voltage
+    - writer_id: sensor_data_csv
+      def:
+        id: !py event.topic_id
+        time: !py event.time
+        battery: !py event.data.battery
+        last_seen: !py event.data.last_seen
+        linkquality: !py event.data.linkquality
+        power_outage_count: !py event.data.power_outage_count
+        state : !py event.data.state
+        voltage: !py event.data.voltage
 
-  low_battery:
-    class: yamc.collectors.EventCollector
-    source: !py providers.mqtt.select("zigbee2mqtt/.*")
-
-    writers:
-      - writer_id: pushover
-        do_push: !py "event.data.battery is not None and event.data.battery < 20"
-        message: !py _utils.format("The sensor {id} has low battery ({battery}%)!",id=event.id,battery=event.data.battery)
+  # low_battery:
+  #   class: yamc.collectors.EventCollector
+  #   source: !py providers.mqtt.select("zigbee2mqtt/.*")
+  #
+  #   writers:
+  #     - writer_id: pushover
+  #       do_push: !py "event.data.battery is not None and event.data.battery < 20"
+  #       message: !py _utils.format("The sensor {id} has low battery ({battery}%)!",id=event.topic_id,battery=event.data.battery)

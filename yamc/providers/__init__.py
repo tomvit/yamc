@@ -11,4 +11,5 @@ from .provider import (
     CsvHttpProvider,
     Topic,
     EventProvider,
+    StateProvider,
 )

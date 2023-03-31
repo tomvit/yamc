@@ -11,11 +11,11 @@ import threading
 import unidecode
 
 from lxml import etree
-from yamc.component import BaseComponent
+from yamc.component import BaseComponent, global_state
 
 from enum import Enum
 
-from yamc.utils import Map
+from yamc.utils import Map, deep_find
 
 
 class BaseProvider(BaseComponent):
@@ -254,7 +254,7 @@ class Topic:
     """
 
     def __init__(self, id, provider):
-        self.id = id
+        self.topic_id = id
         self.time = 0
         self.data = None
         self.callbacks = []
@@ -323,7 +323,45 @@ class EventProvider(BaseProvider):
             self.data = Map()
         if topic is None:
             for topic in self.topics.values():
-                self.data[topic.id] = Map(time=topic.time, data=topic.data)
+                self.data[topic.topic_id] = Map(time=topic.time, data=topic.data)
         else:
-            self.data[topic.id] = Map(time=topic.time, data=topic.data)
+            self.data[topic.topic_id] = Map(time=topic.time, data=topic.data)
         return True
+
+
+class StateProvider(EventProvider):
+    """
+    Event provider for the state object. It can be used to subscribe to topics
+    that correspond to paths in the state object data dict. When the state object data
+    change, the state provider gets notified via `on_data` method and updates the
+    corresponding topic's data.
+    """
+
+    def __init__(self, config, component_id):
+        super().__init__(config, component_id)
+        self.name = self.config.value("name")
+
+        # get the state object and register the data callback on it
+        self.state = global_state.get_state(self.name, self)
+        self.state.add_data_callback(self.on_data)
+
+    def value(self, path):
+        return deep_find(self.state.data, path, default=None)
+
+    def on_data(self, data):
+        def _walk(d, callback, path=""):
+            if path != "":
+                callback(path, d)
+            if isinstance(d, dict):
+                for k, v in d.items():
+                    _walk(v, callback, path=f"{path}{k}/")
+            elif isinstance(d, list):
+                for num, x in enumerate(d, start=0):
+                    _walk(x, callback, path=f"{path}[{num}]/")
+
+        def _update_topic(path, data):
+            for topic in self.topics.values():
+                if topic.topic_id == path[:-1]:
+                    topic.update(data)
+
+        _walk(data, _update_topic)

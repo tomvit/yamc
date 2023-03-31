@@ -7,3 +7,4 @@ from __future__ import unicode_literals
 from .writer import Writer, HealthCheckException
 from .csv_writer import CsvWriter
 from .influxdb import InfluxDBWriter
+from .state import StateWriter

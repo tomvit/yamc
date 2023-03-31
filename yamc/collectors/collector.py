@@ -90,21 +90,10 @@ class BaseCollector(WorkerComponent):
         return _data
 
     def write(self, data, scope=None):
-        _scope = Map() if scope is None else scope
-        _scope.data = data
         for w in self.writers.values():
             if w["__writer"] is not None:
-                writer_config = Map({k: v for k, v in w.items() if k != "__writer"})
-                w["__writer"].write(
-                    self.component_id,
-                    data,
-                    deep_eval(
-                        writer_config,
-                        self.base_scope(_scope),
-                        log=self.log,
-                        raise_ex=False,
-                    ),
-                )
+                writer_def = Map({k: v for k, v in w.items() if k != "__writer"})
+                w["__writer"].write(self.component_id, data, writer_def, scope)
 
 
 class CronCollector(BaseCollector):
@@ -154,12 +143,12 @@ class EventCollector(BaseCollector):
         super().__init__(config, component_id)
         self.source = self.config.value("source", required=True)
         self.log.info(
-            "The event sources are: %s" % (", ".join([x.id for x in self.source]))
+            "The event sources are: %s" % (", ".join([x.topic_id for x in self.source]))
         )
 
     def worker(self, exit_event):
         for s in self.source:
-            self.log.info(f"Subscribing to events from '{s.id}'")
+            self.log.info(f"Subscribing to events from '{s.topic_id}'")
             s.subscribe(
                 lambda x: self.write(
                     self.prepare_data(scope=Map(event=x)), scope=Map(event=x)

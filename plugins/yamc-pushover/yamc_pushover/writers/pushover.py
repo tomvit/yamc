@@ -45,7 +45,7 @@ class PushoverWriter(Writer):
             if not item.collector_id in collectors.keys():
                 collectors[item.collector_id] = []
             collectors[item.collector_id].append(
-                Map(data=item.data, writer_config=item.writer_config)
+                Map(data=item.data)
             )
         return collectors.items()
 
@@ -56,32 +56,22 @@ class PushoverWriter(Writer):
                     f"{collector}: there are more than 1 item, will use the last one."
                 )
             item = _items[-1]
-            self.log.debug(
-                f"{collector}: using the following data to prepare a message: "
-                + str(item)
-            )
-
-            if not item.writer_config.do_push:
-                self.log.debug(
-                    f"{collector}: the message will not be sent, do_push was evaluated to False."
+            message = item.data.get("message")
+            if message:
+                self.log.info(
+                    f"{collector}: sending pushover message '{message}'"
                 )
-                continue
-
-            self.log.info(
-                f"{collector}: sending pushover message '{item.writer_config.message}'"
-            )
-            try:
-                r = requests.post(
-                    f"https://{self.pushover_host}{self.pushover_url}",
-                    data={
-                        "token": self.app_token,
-                        "user": self.user_token,
-                        "message": item.writer_config.message,
-                    },
-                )
-                r.raise_for_status()
-                self._prev_hash = item.writer_config.hash
-            except requests.exceptions.HTTPError as e:
-                raise Exception("Sending message to pushover failed!", e)
-            except requests.exceptions.RequestException as e:
-                raise HealthCheckException("Sending message to pushover failed!", e)
+                try:
+                    r = requests.post(
+                        f"https://{self.pushover_host}{self.pushover_url}",
+                        data={
+                            "token": self.app_token,
+                            "user": self.user_token,
+                            "message": message,
+                        },
+                    )
+                    r.raise_for_status()
+                except requests.exceptions.HTTPError as e:
+                    raise Exception("Sending message to pushover failed!", e)
+                except requests.exceptions.RequestException as e:
+                    raise HealthCheckException("Sending message to pushover failed!", e)

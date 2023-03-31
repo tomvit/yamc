@@ -14,7 +14,7 @@ import ast
 import pickle
 
 from queue import Queue
-from yamc.utils import Map, randomString
+from yamc.utils import Map, randomString, PythonExpression, deep_merge
 from yamc.component import WorkerComponent
 
 
@@ -58,12 +58,67 @@ class Writer(WorkerComponent):
                 self._is_healthy = False
         return self._is_healthy
 
-    def write(self, collector_id, data, writer_config):
+    def process_conditional_dict(self, d, scope):
+        def _error(s):
+            return Exception(f"Invalid conditional dict. {s}.")
+
+        def _deep_eval(d2):
+            if isinstance(d2, dict):
+                for key, value in d2.items():
+                    d2[key] = _deep_eval(value)
+            elif isinstance(d2, list):
+                for i, x in enumerate(d2):
+                    d2[i] = _deep_eval(x)
+            elif isinstance(d2, PythonExpression):
+                try:
+                    d2 = d2.eval(scope)
+                except Exception as e:
+                    self.log.error(
+                        f"The Python expression '{d2.expr_str}' failed. %s." % (str(e))
+                    )
+                    d2 = None
+            return d2
+
+        def _process_block(c, data):
+            if_expr = c.get("if")
+            if if_expr is not None and not isinstance(if_expr, PythonExpression):
+                raise _error("The 'if' expression must be a Python expression.")
+            if if_expr is None or if_expr.eval(scope):
+                df2 = c.get("def")
+                if df2 is not None:
+                    data = deep_merge(self.process_conditional_dict(c, scope), data)
+                else:
+                    data = deep_merge(
+                        _deep_eval({k: v for k, v in c.items() if k != "if"}), data
+                    )
+            return data
+
+        data = {}
+        df = d.get("def")
+        if df is None:
+            raise _error("There must be 'def' property.")
+        if isinstance(df, list):
+            for c in df:
+                data = _process_block(c, data)
+        else:
+            data = _process_block(df, data)
+        return data
+
+    def write(self, collector_id, data, writer_def, scope=None):
         """
         Non-blocking write operation. This method is called from a collector and must be non-blocking
         so that the collector can process collecting of measurements
         """
-        _data = Map(collector_id=collector_id, data=data, writer_config=writer_config)
+        self.log.debug(
+            f"Writing data using the following writer definition: {writer_def}"
+        )
+        _scope = Map() if scope is None else scope
+        _scope.data = data
+        _data = Map(
+            collector_id=collector_id,
+            data=self.process_conditional_dict(writer_def, self.base_scope(_scope)),
+        )
+        self.log.debug(f"The conditional dict resulted in the following data: {_data}")
         if self.is_healthy():
             self.queue.put(_data)
             if self.write_interval == 0:

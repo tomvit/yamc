@@ -8,13 +8,95 @@ import logging
 import threading
 import time
 
-from .utils import merge_dicts
+from threading import Timer
+
+from .utils import merge_dicts, Map, deep_find
+
+
+class State:
+    """
+    The state object. It is used to hold a state of data across providers in the configuration
+    and provides the timer. The state object can be allocated from any component such as a writer
+    that can update data in the state object or provider that can read data from the state such as `StateProvider`
+    which is a subclass of `EventProvider`.
+    """
+
+    def __init__(self, name):
+        self.name = name
+        self.data = Map()
+        self.data_callbacks = []
+        self.log = logging.getLogger("%s" % (name))
+        self.timers = {}
+
+    def add_data_callback(self, callback):
+        self.data_callbacks.append(callback)
+
+    def update(self, data):
+        def _on_timer(name, data):
+            timer = self.timers[name]
+            del self.timers[name]
+            self.log.debug(
+                f"Timer occurred after {data['timer'][name]['value']} seconds. Calling registered callbacks."
+            )
+            for data_callback in self.data_callbacks:
+                data_callback(data)
+
+        for k, v in data.items():
+            if k == "timer" and isinstance(v, dict):
+                for k1, v1 in v.items():
+                    try:
+                        name, value = k1, float(v1["value"])
+                        timer = self.timers.get(name)
+                        if timer is None and value > 0:
+                            self.log.debug(
+                                f"Creating a new timer with name '{name}' and timeout {value}."
+                            )
+                            self.timers[name] = Timer(
+                                value, lambda: _on_timer(name, {"timer": v})
+                            )
+                            self.timers[name].start()
+                        elif timer is not None and value == 0:
+                            self.log.debug(
+                                f"The timer with name '{name}' already exists, will cancel it as the value is set to 0."
+                            )
+                            self.timers[name].cancel()
+                            del self.timers[name]
+                        elif timer is not None:
+                            self.log.debug(
+                                f"The timer with name '{name}' already exists and it will not be updated."
+                            )
+                    except (ValueError, KeyError) as e:
+                        self.log.error(
+                            f"Cannot handle the timer. The timer has an invalid definition. {str(e)}"
+                        )
+
+        # delete timer data
+        if "timer" in data:
+            del data["timer"]
+
+        # call data callbacks for the data that has been changed
+        for data_callback in self.data_callbacks:
+            data_callback(data)
+        self.data = merge_dicts(self.data, data)
+
+
+class GlobalState:
+    def __init__(self):
+        self.data = Map()
+
+    def get_state(self, name, component):
+        state = self.data.setdefault(name, State(name))
+        return state
+
+
+global_state = GlobalState()
 
 
 class BaseComponent:
     """
     Base class for all components.
     """
+
     def __init__(self, config, component_id):
         self.base_config = config
         self.component_id = component_id
@@ -40,6 +122,7 @@ class WorkerComponent(BaseComponent):
     The base class for all worker components, that is components that run
     worker threads.
     """
+
     def __init__(self, config, component_id):
         super().__init__(config, component_id)
         self.thread = None
@@ -70,7 +153,7 @@ class WorkerComponent(BaseComponent):
 
     def join(self):
         """
-        Call `join` on the worker thread if the worker thread is running. 
+        Call `join` on the worker thread if the worker thread is running.
         """
         if self.running():
             self.thread.join()

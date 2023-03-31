@@ -320,7 +320,9 @@ class Config:
                 },
                 "handlers": {
                     "console": {
-                        "formatter": "colored" if yamc_config.ANSI_COLORS else "standard",
+                        "formatter": "colored"
+                        if yamc_config.ANSI_COLORS
+                        else "standard",
                         "class": "logging.StreamHandler",
                         "stream": "ext://sys.stdout",  # Default is stderr
                     },

@@ -38,5 +38,5 @@ class CsvWriter(Writer):
     def do_write(self, items):
         self.log.debug(f"Writing {len(items)} rows to {self.handler_def['filename']}")
         for data in items:
-            line = [str(v) for k, v in data.writer_config.fields.items()]
+            line = [str(v) for k, v in data.data.items()]
             self.csv_writer.info(",".join(line))

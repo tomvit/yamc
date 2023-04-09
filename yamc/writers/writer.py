@@ -28,6 +28,7 @@ class Writer(WorkerComponent):
         self.config = config.writer(component_id)
 
         self.write_interval = self.config.value_int("write_interval", default=10)
+        self.write_empty = self.config.value_int("write_empty", default=True)
         self.healthcheck_interval = self.config.value_int(
             "healthcheck_interval", default=20
         )
@@ -58,50 +59,75 @@ class Writer(WorkerComponent):
                 self._is_healthy = False
         return self._is_healthy
 
-    def process_conditional_dict(self, d, scope):
+    def process_conditional_dict(self, d, scope, path=""):
         def _error(s):
             return Exception(f"Invalid conditional dict. {s}.")
 
-        def _deep_eval(d2):
+        def _deep_eval(d2, path=""):
             if isinstance(d2, dict):
                 for key, value in d2.items():
-                    d2[key] = _deep_eval(value)
+                    d2[key] = _deep_eval(value, path + "/" + key)
             elif isinstance(d2, list):
                 for i, x in enumerate(d2):
-                    d2[i] = _deep_eval(x)
+                    d2[i] = _deep_eval(x, path + f"[{i}]/")
             elif isinstance(d2, PythonExpression):
                 try:
                     d2 = d2.eval(scope)
                 except Exception as e:
-                    self.log.error(
-                        f"The Python expression '{d2.expr_str}' failed. %s." % (str(e))
+                    raise _error(
+                        f"The Python expression '{d2.expr_str}' failed in {path}. %s."
+                        % (str(e))
                     )
-                    d2 = None
             return d2
 
-        def _process_block(c, data):
+        def _process_block(c, data, path=""):
             if_expr = c.get("if")
-            if if_expr is not None and not isinstance(if_expr, PythonExpression):
-                raise _error("The 'if' expression must be a Python expression.")
-            if if_expr is None or if_expr.eval(scope):
+            if_opts = [x.strip() for x in c.get("opts", "").split(",")]
+            if if_expr is not None:
+                path = path + "/if"
+                if not isinstance(if_expr, PythonExpression):
+                    raise _error(
+                        f"The 'if' expression must be a Python expression in {path}"
+                    )
+            try:
+                eval_result = if_expr is None or if_expr.eval(scope)
+            except Exception as e:
+                raise _error(f"Error: {if_expr.expr_str} in {path}. {str(e)}")
+            if eval_result and (
+                "onoff" not in if_opts
+                or c.get("__last_if_eval") is None
+                or eval_result != c.get("__last_if_eval")
+            ):
                 df2 = c.get("def")
                 if df2 is not None:
-                    data = deep_merge(self.process_conditional_dict(c, scope), data)
+                    data = deep_merge(
+                        self.process_conditional_dict(c, scope, path + "/def"), data
+                    )
                 else:
                     data = deep_merge(
-                        _deep_eval({k: v for k, v in c.items() if k != "if"}), data
+                        _deep_eval(
+                            {
+                                k: v
+                                for k, v in c.items()
+                                if k not in ["if", "opts", "__last_if_eval"]
+                            },
+                            path,
+                        ),
+                        data,
                     )
+            if if_expr is not None:
+                c["__last_if_eval"] = eval_result
             return data
 
         data = {}
         df = d.get("def")
         if df is None:
-            raise _error("There must be 'def' property.")
+            raise _error(f"There must be 'def' property in {path}")
         if isinstance(df, list):
-            for c in df:
-                data = _process_block(c, data)
+            for i, c in enumerate(df):
+                data = _process_block(c, data, path + f"/def[{i}]")
         else:
-            data = _process_block(df, data)
+            data = _process_block(df, data, path + "/def")
         return data
 
     def write(self, collector_id, data, writer_def, scope=None):
@@ -119,7 +145,9 @@ class Writer(WorkerComponent):
             data=self.process_conditional_dict(writer_def, self.base_scope(_scope)),
         )
         self.log.debug(f"The conditional dict resulted in the following data: {_data}")
-        if self.is_healthy():
+        if len(_data["data"]) == 0 and not self.write_empty:
+            self.log.debug("The data is empty, will not write them.")
+        elif self.is_healthy():
             self.queue.put(_data)
             if self.write_interval == 0:
                 self.write_event.set()

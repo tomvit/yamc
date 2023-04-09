@@ -35,3 +35,4 @@ class StateWriter(Writer):
         for data in items:
             self.log.debug(f"The data is {data}")
             self.state.update(data.data)
+        self.log.debug(f"The state object data is {self.state.data}")

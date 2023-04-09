@@ -44,9 +44,7 @@ class PushoverWriter(Writer):
         for item in items:
             if not item.collector_id in collectors.keys():
                 collectors[item.collector_id] = []
-            collectors[item.collector_id].append(
-                Map(data=item.data)
-            )
+            collectors[item.collector_id].append(Map(data=item.data))
         return collectors.items()
 
     def do_write(self, items):
@@ -58,9 +56,7 @@ class PushoverWriter(Writer):
             item = _items[-1]
             message = item.data.get("message")
             if message:
-                self.log.info(
-                    f"{collector}: sending pushover message '{message}'"
-                )
+                self.log.info(f"{collector}: sending pushover message '{message}'")
                 try:
                     r = requests.post(
                         f"https://{self.pushover_host}{self.pushover_url}",

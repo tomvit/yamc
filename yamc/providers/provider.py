@@ -269,6 +269,10 @@ class Topic:
         for callback in self.callbacks:
             callback(self)
 
+    @property
+    def last(self):
+        return self.history[-1] if len(self.history) > 0 else Map()
+
     def subscribe(self, callback):
         self.callbacks.append(callback)
 
@@ -345,8 +349,8 @@ class StateProvider(EventProvider):
         self.state = global_state.get_state(self.name, self)
         self.state.add_data_callback(self.on_data)
 
-    def value(self, path):
-        return deep_find(self.state.data, path, default=None)
+    def get(self, path):
+        return deep_find(self.state.data, path, default=None, delim="/")
 
     def on_data(self, data):
         def _walk(d, callback, path=""):

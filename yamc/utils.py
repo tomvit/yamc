@@ -125,10 +125,10 @@ def deep_eval(data, scope, log=None, raise_ex=False):
     return data
 
 
-def deep_find(dic, keys, default=None, type=None):
+def deep_find(dic, keys, default=None, type=None, delim="."):
     val = reduce(
         lambda di, key: di.get(key, default) if isinstance(di, dict) else default,
-        keys.split("."),
+        keys.split(delim),
         dic,
     )
     if val == default:

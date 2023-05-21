@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 # @author: Tomas Vitvar, https://vitvar.com, tomas@vitvar.com
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import re
 
 from .writer import Writer
@@ -29,9 +26,7 @@ class StateWriter(Writer):
         pass
 
     def do_write(self, items):
-        self.log.debug(
-            f"Writing {len(items)} rows to the global state object '{self.name}'"
-        )
+        self.log.debug(f"Writing {len(items)} rows to the global state object '{self.name}'")
         for data in items:
             self.log.debug(f"The data is {data}")
             self.state.update(data.data)

@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 # @author: Tomas Vitvar, https://vitvar.com, tomas@vitvar.com
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import time
 import logging
 
@@ -25,9 +22,7 @@ class InfluxDBWriter(Writer):
             "Creating client connection, host=%s, port=%s, user=%s, password=(secret), dbname=%s"
             % (self.host, self.port, self.user, self.dbname)
         )
-        self.client = InfluxDBClient(
-            self.host, self.port, self.user, self.pswd, self.dbname
-        )
+        self.client = InfluxDBClient(self.host, self.port, self.user, self.pswd, self.dbname)
 
     def healthcheck(self):
         self.client.ping()
@@ -64,10 +59,7 @@ class InfluxDBWriter(Writer):
                 tags=tags,
             )
             if point.time == 0:
-                log.error(
-                    "Cannot write the data point %s to the influxdb due to a missing time field!"
-                    % str(point)
-                )
+                log.error("Cannot write the data point %s to the influxdb due to a missing time field!" % str(point))
                 continue
             if len(point.fields.keys()) == 0:
                 log.warn("There are no fields in the data point %s!" % str(point))

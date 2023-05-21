@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 # @author: Tomas Vitvar, https://vitvar.com, tomas@vitvar.com
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import click
 
 import pkgutil
@@ -48,18 +45,14 @@ def find_yamc_subclasses():
     for module in pkgutil.iter_modules():
         if module.name.startswith("yamc"):
             modules = [importlib.import_module(module.name)]
-            for submodule in pkgutil.walk_packages(
-                modules[0].__path__, modules[0].__name__ + "."
-            ):
+            for submodule in pkgutil.walk_packages(modules[0].__path__, modules[0].__name__ + "."):
                 if submodule.name.split(".")[-1] != "__main__":
                     modules.append(importlib.import_module(submodule.name))
             for m in modules:
                 for class_name, cls in inspect.getmembers(m, inspect.isclass):
                     _add_class(writers, m, cls, Writer, modules[0], "Writer")
                     _add_class(providers, m, cls, BaseProvider, modules[0], "Provider")
-                    _add_class(
-                        collectors, m, cls, BaseCollector, modules[0], "Collector"
-                    )
+                    _add_class(collectors, m, cls, BaseCollector, modules[0], "Collector")
     _data = []
     _set = set()
     for c in sorted(writers + providers + collectors, key=cmp_to_key(_compare)):

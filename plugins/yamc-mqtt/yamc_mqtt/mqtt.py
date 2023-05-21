@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 # @author: Tomas Vitvar, https://vitvar.com, tomas@vitvar.com
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import time
 import json
 import logging
@@ -68,9 +65,7 @@ class MQTTBase(BaseComponent):
             self.init_client()
             while not exit_event.is_set():
                 try:
-                    self.client.connect(
-                        self.address, port=self.port, keepalive=self.keepalive
-                    )
+                    self.client.connect(self.address, port=self.port, keepalive=self.keepalive)
                     break
                 except Exception as e:
                     self.log.error(
@@ -148,6 +143,4 @@ class MQTTWriter(Writer, MQTTBase):
 
     def start(self, exit_event):
         super().start(exit_event)
-        threading.Thread(
-            target=self.connection_loop, args=(exit_event,), daemon=True
-        ).start()
+        threading.Thread(target=self.connection_loop, args=(exit_event,), daemon=True).start()

@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 # @author: Tomas Vitvar, https://vitvar.com, tomas@vitvar.com
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import os
 import sys
 import time
@@ -29,9 +26,7 @@ class Writer(WorkerComponent):
 
         self.write_interval = self.config.value_int("write_interval", default=10)
         self.write_empty = self.config.value_int("write_empty", default=True)
-        self.healthcheck_interval = self.config.value_int(
-            "healthcheck_interval", default=20
-        )
+        self.healthcheck_interval = self.config.value_int("healthcheck_interval", default=20)
         self.disable_backlog = self.config.value_int("disable_backlog", default=False)
         self.batch_size = self.config.value_int("batch_size", default=100)
         self._is_healthy = False
@@ -45,10 +40,7 @@ class Writer(WorkerComponent):
         pass
 
     def is_healthy(self):
-        if (
-            not self._is_healthy
-            and time.time() - self.last_healthcheck > self.healthcheck_interval
-        ):
+        if not self._is_healthy and time.time() - self.last_healthcheck > self.healthcheck_interval:
             try:
                 self.last_healthcheck = time.time()
                 self.healthcheck()
@@ -75,10 +67,7 @@ class Writer(WorkerComponent):
                 try:
                     d2 = d2.eval(scope)
                 except Exception as e:
-                    raise _error(
-                        f"The Python expression '{d2.expr_str}' failed in {path}. %s."
-                        % (str(e))
-                    )
+                    raise _error(f"The Python expression '{d2.expr_str}' failed in {path}. %s." % (str(e)))
             return d2
 
         def _process_block(c, data, path=""):
@@ -87,31 +76,21 @@ class Writer(WorkerComponent):
             if if_expr is not None:
                 path = path + "/if"
                 if not isinstance(if_expr, PythonExpression):
-                    raise _error(
-                        f"The 'if' expression must be a Python expression in {path}"
-                    )
+                    raise _error(f"The 'if' expression must be a Python expression in {path}")
             try:
                 eval_result = if_expr is None or if_expr.eval(scope)
             except Exception as e:
                 raise _error(f"Error: {if_expr.expr_str} in {path}. {str(e)}")
             if eval_result and (
-                "onoff" not in if_opts
-                or c.get("__last_if_eval") is None
-                or eval_result != c.get("__last_if_eval")
+                "onoff" not in if_opts or c.get("__last_if_eval") is None or eval_result != c.get("__last_if_eval")
             ):
                 df2 = c.get("def")
                 if df2 is not None:
-                    data = deep_merge(
-                        self.process_conditional_dict(c, scope, path + "/def"), data
-                    )
+                    data = deep_merge(self.process_conditional_dict(c, scope, path + "/def"), data)
                 else:
                     data = deep_merge(
                         _deep_eval(
-                            {
-                                k: v
-                                for k, v in c.items()
-                                if k not in ["if", "opts", "__last_if_eval"]
-                            },
+                            {k: v for k, v in c.items() if k not in ["if", "opts", "__last_if_eval"]},
                             path,
                         ),
                         data,
@@ -136,9 +115,7 @@ class Writer(WorkerComponent):
         Non-blocking write operation. This method is called from a collector and must be non-blocking
         so that the collector can process collecting of measurements.
         """
-        self.log.debug(
-            f"Writing data using the following writer definition: {writer_def}"
-        )
+        self.log.debug(f"Writing data using the following writer definition: {writer_def}")
         _scope = Map() if scope is None else scope
         _scope.data = data
         _data = Map(
@@ -180,15 +157,12 @@ class Writer(WorkerComponent):
                 # write the batch
                 try:
                     self.log.debug(
-                        "Writing the batch, batch-size=%d, queue-size=%d."
-                        % (len(batch), self.queue.qsize())
+                        "Writing the batch, batch-size=%d, queue-size=%d." % (len(batch), self.queue.qsize())
                     )
                     if not self.base_config.test:
                         self.do_write(batch)
                     else:
-                        self.log.debug(
-                            "Running in test mode, the writing operation is disabled."
-                        )
+                        self.log.debug("Running in test mode, the writing operation is disabled.")
                 except HealthCheckException as e:
                     self.log.error(
                         "Cannot write the batch due to writer's problem: %s. The batch will be stored in the backlog."
@@ -199,8 +173,7 @@ class Writer(WorkerComponent):
                     self.backlog.put(batch)
                 except Exception as e:
                     self.log.error(
-                        "Cannot write the batch. It will be discarded due to the following error: %s"
-                        % (str(e)),
+                        "Cannot write the batch. It will be discarded due to the following error: %s" % (str(e)),
                         exc_info=self.base_config.debug,
                     )
 
@@ -234,16 +207,13 @@ class Backlog:
         self.writer = writer
         self.config = config
         self.log = writer.log
-        self.backlog_dir = config.get_dir_path(
-            config.data_dir + "/backlog/" + self.writer.component_id
-        )
+        self.backlog_dir = config.get_dir_path(config.data_dir + "/backlog/" + self.writer.component_id)
         os.makedirs(self.backlog_dir, exist_ok=True)
         self.refresh()
 
     def refresh(self):
         files = filter(
-            lambda x: os.path.isfile(os.path.join(self.backlog_dir, x))
-            and re.match("items_[a-zA-Z0-9]+.data$", x),
+            lambda x: os.path.isfile(os.path.join(self.backlog_dir, x)) and re.match("items_[a-zA-Z0-9]+.data$", x),
             os.listdir(self.backlog_dir),
         )
         files = [f for f in files]
@@ -258,10 +228,7 @@ class Backlog:
             with open(os.path.join(self.backlog_dir, file), "wb") as f:
                 pickle.dump(items, f, protocol=pickle.HIGHEST_PROTOCOL)
             self.all_files.append(file)
-            self.log.debug(
-                "Writing data to the writer's backlog. The backlog size is %d."
-                % (self.size())
-            )
+            self.log.debug("Writing data to the writer's backlog. The backlog size is %d." % (self.size()))
 
     def peek(self, size):
         files = self.all_files[: min(size, len(self.all_files))]
@@ -276,14 +243,9 @@ class Backlog:
             for file in files:
                 os.remove(os.path.join(self.backlog_dir, file))
         else:
-            self.log.info(
-                "Running in test mode, removing of backlog files is disabled."
-            )
+            self.log.info("Running in test mode, removing of backlog files is disabled.")
         self.all_files = [x for x in self.all_files if x not in files]
-        self.log.debug(
-            "Removing data from the writer's backlog. The backlog size is %s."
-            % (self.size())
-        )
+        self.log.debug("Removing data from the writer's backlog. The backlog size is %s." % (self.size()))
 
     def size(self):
         return len(self.all_files)
@@ -306,13 +268,9 @@ class Backlog:
                     self.remove(batch_files)
                 except Exception as e:
                     self.log.error(
-                        "Cannot write item from the writer's backlog due to: %s"
-                        % (str(e)),
+                        "Cannot write item from the writer's backlog due to: %s" % (str(e)),
                         exc_info=self.writer.base_config.debug,
                     )
                     self.writer._is_healthy = False
                     break
-            self.log.info(
-                "The processing of the backlog finished. The backlog size is %s."
-                % self.size()
-            )
+            self.log.info("The processing of the backlog finished. The backlog size is %s." % self.size())

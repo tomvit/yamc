@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 # @author: Tomas Vitvar, https://vitvar.com, tomas@vitvar.com
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import random
 import string
 import re
@@ -115,9 +112,7 @@ def deep_eval(data, scope, log=None, raise_ex=False):
             data = data.eval(scope)
         except Exception as e:
             if log is not None:
-                log.error(
-                    f"The Python expression '{data.expr_str}' failed. %s." % (str(e))
-                )
+                log.error(f"The Python expression '{data.expr_str}' failed. %s." % (str(e)))
             if raise_ex:
                 raise
             else:
@@ -169,11 +164,7 @@ def deep_merge(source, destination):
             node = destination.setdefault(key, {})
             deep_merge(value, node)
         else:
-            if (
-                key in destination
-                and isinstance(destination[key], list)
-                and isinstance(value, list)
-            ):
+            if key in destination and isinstance(destination[key], list) and isinstance(value, list):
                 for x in value:
                     destination[key].append(x)
             else:
@@ -233,10 +224,7 @@ class PathDef:
             if params.params.get(k):
                 new_path = new_path.replace("%s" % params.params.get(k), v, 1)
             else:
-                raise Exception(
-                    "The param '%s' has not been found in path definition '%s'."
-                    % (k, self.path_def)
-                )
+                raise Exception("The param '%s' has not been found in path definition '%s'." % (k, self.path_def))
 
         return new_path
 

@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 # @author: Tomas Vitvar, https://vitvar.com, tomas@vitvar.com
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import time
 import logging
 import requests
@@ -18,12 +15,8 @@ class PushoverWriter(Writer):
         super().__init__(config, component_id)
         self.app_token = self.config.value_str("app_token")
         self.user_token = self.config.value_str("user_token")
-        self.pushover_host = self.config.value_str(
-            "pushover_host", default="api.pushover.net"
-        )
-        self.pushover_url = self.config.value_str(
-            "pushover_url", default="/1/messages.json"
-        )
+        self.pushover_host = self.config.value_str("pushover_host", default="api.pushover.net")
+        self.pushover_url = self.config.value_str("pushover_url", default="/1/messages.json")
         if self.config.value("write_interval", None) is None:
             self.write_interval = 0
         self._prev_hash = None
@@ -33,9 +26,7 @@ class PushoverWriter(Writer):
         try:
             sock.connect((self.pushover_host, 443))
         except Exception as e:
-            raise HealthCheckException(
-                f"Cannot connect to the pushover host {self.pushover_host}!", e
-            )
+            raise HealthCheckException(f"Cannot connect to the pushover host {self.pushover_host}!", e)
         finally:
             sock.close()
 
@@ -50,9 +41,7 @@ class PushoverWriter(Writer):
     def do_write(self, items):
         for collector, _items in self.items_per_collector(items):
             if len(_items) > 0:
-                self.log.debug(
-                    f"{collector}: there are more than 1 item, will use the last one."
-                )
+                self.log.debug(f"{collector}: there are more than 1 item, will use the last one.")
             item = _items[-1]
             message = item.data.get("message")
             if message:

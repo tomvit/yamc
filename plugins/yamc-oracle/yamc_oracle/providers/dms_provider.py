@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 # @author: Tomas Vitvar, https://vitvar.com, tomas@vitvar.com
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import time
 
 from dms_collector import DmsCollector
@@ -32,15 +29,10 @@ class DmsProvider(BaseProvider):
     def init_dms(self):
         if self.dms is None or time.time() - self.connect_time > self.reconnect_after:
             if self.dms is not None:
-                self.log.info(
-                    "Reconnecting to DMS Spy after %d seconds." % self.reconnect_after
-                )
-            self.dms = DmsCollector(
-                self.admin_url, username=self.username, password=self.password
-            )
+                self.log.info("Reconnecting to DMS Spy after %d seconds." % self.reconnect_after)
+            self.dms = DmsCollector(self.admin_url, username=self.username, password=self.password)
             self.log.info(
-                "DMS provider initialized: url=%s, username=%s, password=(secret)"
-                % (self.admin_url, self.username)
+                "DMS provider initialized: url=%s, username=%s, password=(secret)" % (self.admin_url, self.username)
             )
             self.connect_time = time.time()
 

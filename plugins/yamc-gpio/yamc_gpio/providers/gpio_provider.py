@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 # @author: Tomas Vitvar, https://vitvar.com, tomas@vitvar.com
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import time
 import RPi.GPIO as GPIO
 
@@ -51,10 +48,7 @@ class GPIOPulseProvider(BaseProvider, WorkerComponent):
                         ):
                             self._pulses += 1
                         else:
-                            self.log.error(
-                                "No falling edge detected after %d millseconds!"
-                                % self.timeout_falling_edge
-                            )
+                            self.log.error("No falling edge detected after %d millseconds!" % self.timeout_falling_edge)
             finally:
                 self.log.info("Cleaning up GPIO.")
                 GPIO.cleanup()

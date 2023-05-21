@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 # @author: Tomas Vitvar, https://vitvar.com, tomas@vitvar.com
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import time
 import logging
 import os
@@ -24,13 +21,9 @@ class CsvWriter(Writer):
         self.csv_writer = manager.getLogger(f"CsvWriter_{randomString()}")
         self.csv_writer.setLevel(logging.INFO)
         if "filename" in self.handler_def:
-            self.handler_def["filename"] = self.config.get_dir_path(
-                self.handler_def["filename"], check=False
-            )
+            self.handler_def["filename"] = self.config.get_dir_path(self.handler_def["filename"], check=False)
             os.makedirs(os.path.dirname(self.handler_def["filename"]), exist_ok=True)
-        self.csv_writer.addHandler(
-            clazz(**{k: v for k, v in self.handler_def.items() if k != "class"})
-        )
+        self.csv_writer.addHandler(clazz(**{k: v for k, v in self.handler_def.items() if k != "class"}))
 
     def healthcheck(self):
         pass

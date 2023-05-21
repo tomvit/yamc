@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 # @author: Tomas Vitvar, https://vitvar.com, tomas@vitvar.com
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import requests
 import time
 import re
@@ -81,33 +78,24 @@ class HttpProvider(BaseProvider):
     def init_session(self):
         try:
             if self.init_url is not None and (
-                self.init_time is None
-                or time.time() - self.init_time > self.init_max_age
+                self.init_time is None or time.time() - self.init_time > self.init_max_age
             ):
                 self.init_time = time.time()
-                self.log.info(
-                    "Running the initialization request at %s" % (self.init_url)
-                )
+                self.log.info("Running the initialization request at %s" % (self.init_url))
                 self.session.get(self.init_url)
         except Exception as e:
             self.log.error("The initialization request failed due to %s" % (str(e)))
 
     def update(self):
         with self.lock:
-            if (
-                self._updated_time is None
-                or self.data is None
-                or time.time() - self._updated_time > self.max_age
-            ):
+            if self._updated_time is None or self.data is None or time.time() - self._updated_time > self.max_age:
                 self.init_session()
                 num_retries = 0
                 while num_retries < 3:
                     self._updated_time = time.time()
                     r = self.session.get(self.url)
                     if r.status_code == 404:
-                        raise Exception(
-                            "The resource at %s does not exist!" % (self.url)
-                        )
+                        raise Exception("The resource at %s does not exist!" % (self.url))
                     elif r.status_code >= 400:
                         self.log.error(
                             "The request at %s failed, status-code=%d, num-retries=%d"
@@ -116,16 +104,13 @@ class HttpProvider(BaseProvider):
                         num_retries += 1
                         if num_retries == 3:
                             raise Exception(
-                                "Cannot retrieve the resource at %s after %d attempts!"
-                                % (self.url, num_retries)
+                                "Cannot retrieve the resource at %s after %d attempts!" % (self.url, num_retries)
                             )
                         time.sleep(1)
                     else:
                         break
                 # self.log.debug("The url '%s' retrieved the following data: %s"%(self.url,str(r.content.decode(self.encoding))))
-                self.log.debug(
-                    "The url '%s' retrieved the following data: (strip)" % (self.url)
-                )
+                self.log.debug("The url '%s' retrieved the following data: (strip)" % (self.url))
                 self.data = r.content
                 return True
             else:
@@ -236,8 +221,7 @@ class CsvHttpProvider(HttpProvider):
                 return v
             else:
                 raise Exception(
-                    "The field value '%s' must be of type int or float! The value was '%s'."
-                    % (name, str(v))
+                    "The field value '%s' must be of type int or float! The value was '%s'." % (name, str(v))
                 )
 
         self.update()

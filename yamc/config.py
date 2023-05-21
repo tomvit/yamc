@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 # @author: Tomas Vitvar, https://vitvar.com, tomas@vitvar.com
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import os
 import sys
 import yaml
@@ -45,14 +42,7 @@ def get_dir_path(config_dir, path, base_dir=None, check=False):
     """
     Return the directory for the path specified.
     """
-    d = os.path.normpath(
-        (
-            ((config_dir if base_dir is None else base_dir) + "/")
-            if path[0] != "/"
-            else ""
-        )
-        + path
-    )
+    d = os.path.normpath((((config_dir if base_dir is None else base_dir) + "/") if path[0] != "/" else "") + path)
     if check and not os.path.exists(d):
         raise Exception(f"The directory {d} does not exist!")
     return d
@@ -98,9 +88,7 @@ def read_complex_config(file):
         try:
             return yaml.load(stream, Loader=yaml.FullLoader)
         except Exception as e:
-            raise Exception(
-                f"Error when reading the configuration file {file}: {str(e)}"
-            )
+            raise Exception(f"Error when reading the configuration file {file}: {str(e)}")
         finally:
             stream.close()
 
@@ -110,9 +98,7 @@ def read_complex_config(file):
             for k, v in d.items():
                 if k == "include" and isinstance(v, list):
                     for f in v:
-                        result = deep_merge(
-                            result, read_complex_config(get_dir_path(config_dir, f))[0]
-                        )
+                        result = deep_merge(result, read_complex_config(get_dir_path(config_dir, f))[0])
                 elif isinstance(v, dict):
                     result[k] = _traverse(config_dir, v)
                 else:
@@ -195,10 +181,7 @@ def py_constructor(loader, node):
     try:
         return PythonExpression(replace_env_variable(node.value))
     except Exception as e:
-        raise Exception(
-            'Cannot create python expression from string "%s". %s'
-            % (node.value, str(e))
-        )
+        raise Exception('Cannot create python expression from string "%s". %s' % (node.value, str(e)))
 
 
 class Config:
@@ -217,9 +200,7 @@ class Config:
         self.providers = {}
         self.test = test
         self.log_level = log_level
-        self.scope = Map(
-            writers=None, collectors=None, providers=None, all_components=[], topics=None
-        )
+        self.scope = Map(writers=None, collectors=None, providers=None, all_components=[], topics=None)
 
         if not (os.path.exists(file)):
             raise Exception(f"The configuration file {file} does not exist!")
@@ -247,9 +228,7 @@ class Config:
                     if component.enabled:
                         components[component_id] = component
                 except Exception as e:
-                    raise Exception(
-                        "Cannot load component '%s'. %s" % (component_id, str(e))
-                    )
+                    raise Exception("Cannot load component '%s'. %s" % (component_id, str(e)))
             return components
 
         # def _select_topics(*topics):
@@ -263,15 +242,11 @@ class Config:
         #     return sources
 
         self.config = ConfigPart(self, None, self.raw_config, self.config_dir)
-        self.data_dir = self.get_dir_path(
-            self.config.value("directories.data", default="../data")
-        )
+        self.data_dir = self.get_dir_path(self.config.value("directories.data", default="../data"))
         os.makedirs(self.data_dir, exist_ok=True)
 
         if self.test:
-            self.log.info(
-                "Running in test mode, the log output will be in console only."
-            )
+            self.log.info("Running in test mode, the log output will be in console only.")
 
         # load custom functions
         from inspect import getmembers, isfunction
@@ -282,14 +257,11 @@ class Config:
             directory = os.path.dirname(filename)
             modulename = re.sub(r"\.py$", "", os.path.basename(filename))
             self.log.debug(
-                "Importing custom module with id %s: module=%s, directory=%s"
-                % (name, modulename, directory)
+                "Importing custom module with id %s: module=%s, directory=%s" % (name, modulename, directory)
             )
             fp, path, desc = imp.find_module(modulename, [directory])
             module = imp.load_module(modulename, fp, path, desc)
-            self.custom_functions[name] = Map(
-                {x[0]: x[1] for x in getmembers(module, isfunction)}
-            )
+            self.custom_functions[name] = Map({x[0]: x[1] for x in getmembers(module, isfunction)})
 
         # initialize scope
         self.log.info("Initializing scope.")
@@ -305,7 +277,6 @@ class Config:
         if self.custom_functions is not None:
             for k, v in self.custom_functions.items():
                 self.scope[k] = v
-
 
     def init_logging(self, logs_dir):
         """
@@ -326,17 +297,12 @@ class Config:
                 "version": 1,
                 "disable_existing_loggers": True,
                 "formatters": {
-                    "standard": {
-                        "format": CustomFormatter.format_header
-                        + CustomFormatter.format_msg
-                    },
+                    "standard": {"format": CustomFormatter.format_header + CustomFormatter.format_msg},
                     "colored": {"()": CustomFormatter},
                 },
                 "handlers": {
                     "console": {
-                        "formatter": "colored"
-                        if yamc_config.ANSI_COLORS
-                        else "standard",
+                        "formatter": "colored" if yamc_config.ANSI_COLORS else "standard",
                         "class": "logging.StreamHandler",
                         "stream": "ext://sys.stdout",  # Default is stderr
                     },
@@ -384,9 +350,7 @@ class Config:
         Return a `ConfigPart` object for a writer with `writer_id`
         """
         if writer_id not in self.writers:
-            self.writers[writer_id] = ConfigPart(
-                self, "writers.%s" % writer_id, self.config._config, self.config_dir
-            )
+            self.writers[writer_id] = ConfigPart(self, "writers.%s" % writer_id, self.config._config, self.config_dir)
         return self.writers[writer_id]
 
     def provider(self, provider_id):
@@ -421,9 +385,7 @@ class ConfigPart:
         r = default
         if self._config is not None:
             val = reduce(
-                lambda di, key: di.get(key, default)
-                if isinstance(di, dict)
-                else default,
+                lambda di, key: di.get(key, default) if isinstance(di, dict) else default,
                 path.split("."),
                 self._config,
             )
@@ -433,15 +395,10 @@ class ConfigPart:
                 if not no_eval:
                     if callable(getattr(val, "eval", None)):
                         try:
-                            val = val.eval(
-                                merge_dicts(
-                                    self.parent.custom_functions, self.parent.scope
-                                )
-                            )
+                            val = val.eval(merge_dicts(self.parent.custom_functions, self.parent.scope))
                         except Exception as e:
                             raise Exception(
-                                "Cannot evaluate Python expression for property '%s'. %s"
-                                % (self.path(path), str(e))
+                                "Cannot evaluate Python expression for property '%s'. %s" % (self.path(path), str(e))
                             )
                 r = type(val) if type != None else val
         if not r and required:
@@ -451,24 +408,15 @@ class ConfigPart:
     def value_str(self, path, default=None, regex=None, required=False):
         v = self.value(path, default=default, type=str, required=required)
         if regex is not None and not re.match(regex, v):
-            raise Exception(
-                "The property %s value %s does not match %s!"
-                % (self.path(path), v, regex)
-            )
+            raise Exception("The property %s value %s does not match %s!" % (self.path(path), v, regex))
         return v
 
     def value_int(self, path, default=None, min=None, max=None, required=False):
         v = self.value(path, default=default, type=int, required=required)
         if min is not None and v < min:
-            raise Exception(
-                "The property %s value %s must be greater or equal to %d!"
-                % (self.path(path), v, min)
-            )
+            raise Exception("The property %s value %s must be greater or equal to %d!" % (self.path(path), v, min))
         if max is not None and v > max:
-            raise Exception(
-                "The property %s value %s must be less or equal to %d!"
-                % (self.path(path), v, max)
-            )
+            raise Exception("The property %s value %s must be less or equal to %d!" % (self.path(path), v, max))
         return v
 
     def value_bool(self, path, default=None, required=False):

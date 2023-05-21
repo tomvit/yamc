@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 # @author: Tomas Vitvar, https://vitvar.com, tomas@vitvar.com
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import logging
 import threading
 import time
@@ -35,9 +32,7 @@ class State:
         def _on_timer(name, data):
             timer = self.timers[name]
             del self.timers[name]
-            self.log.info(
-                f"Timer elapsed after {data['timer'][name]['value']} seconds."
-            )
+            self.log.info(f"Timer elapsed after {data['timer'][name]['value']} seconds.")
             for data_callback in self.data_callbacks:
                 data_callback(data)
 
@@ -48,27 +43,17 @@ class State:
                         name, value = k1, float(v1["value"])
                         timer = self.timers.get(name)
                         if timer is None and value > 0:
-                            self.log.info(
-                                f"The timer created, name='{name}', timeout={value}."
-                            )
-                            self.timers[name] = Timer(
-                                value, lambda: _on_timer(name, {"timer": v})
-                            )
+                            self.log.info(f"The timer created, name='{name}', timeout={value}.")
+                            self.timers[name] = Timer(value, lambda: _on_timer(name, {"timer": v}))
                             self.timers[name].start()
                         elif timer is not None and value == 0:
-                            self.log.info(
-                                f"The timer cancelled, name='{name}', timeout=0."
-                            )
+                            self.log.info(f"The timer cancelled, name='{name}', timeout=0.")
                             self.timers[name].cancel()
                             del self.timers[name]
                         elif timer is not None:
-                            self.log.debug(
-                                f"The timer '{name}' already exists and it will not be updated."
-                            )
+                            self.log.debug(f"The timer '{name}' already exists and it will not be updated.")
                     except (ValueError, KeyError) as e:
-                        self.log.error(
-                            f"Cannot handle the timer. The timer has an invalid definition. {str(e)}"
-                        )
+                        self.log.error(f"Cannot handle the timer. The timer has an invalid definition. {str(e)}")
 
         # delete timer data
         if "timer" in data:
@@ -108,9 +93,7 @@ class BaseComponent:
         Return the base scope for the component by merging the scope from the main
         configuration, custon functions and `custom_scope` provided as a parameter.
         """
-        return merge_dicts(
-            self.base_config.scope, self.base_config.custom_functions, custom_scope
-        )
+        return merge_dicts(self.base_config.scope, self.base_config.custom_functions, custom_scope)
 
     # TODO: the destroy method should be replaced by a standard __del__ method
     def destroy(self):
@@ -140,9 +123,7 @@ class WorkerComponent(BaseComponent):
         """
         self.log.info(f"Starting the worker thread '{self.component_id}'.")
         self.start_time = time.time()
-        self.thread = threading.Thread(
-            target=self.worker, args=(exit_event,), daemon=True
-        )
+        self.thread = threading.Thread(target=self.worker, args=(exit_event,), daemon=True)
         self.thread.start()
 
     def running(self):

@@ -13,3 +13,7 @@ config/o2c_config.yaml
 config/homeauto-config.yaml
 config/fmw-config.yaml
 .DS_Store
+.envrc 
+.python-version
+.vscode
+yamc.code-workspace

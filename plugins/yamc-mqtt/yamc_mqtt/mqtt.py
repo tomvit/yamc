@@ -115,11 +115,10 @@ class MQTTProvider(EventProvider, WorkerComponent, MQTTBase):
         try:
             super().on_message(client, userdata, message)
             topic_id = message._topic.decode("utf-8")
-            self.log.info(f"Received on_message for topic {topic_id}")
             topic = self.select_one(topic_id)
             if topic:
                 data = Map(json.loads(str(message.payload.decode("utf-8"))))
-                self.log.debug("The data is: " + str(data))
+                self.log.info(f"--> recv: {topic_id}: {data}")
                 topic.update(data)
         except Exception as e:
             self.log.error(str(e))
@@ -132,18 +131,20 @@ class MQTTWriter(Writer, MQTTBase):
     """
     MQTTWriter writes data to topics in MQTT broker.
     """
-    
+
     def __init__(self, config, component_id):
         super().__init__(config, component_id)
         self.init_config(self.config)
+        self.write_empty = False
 
     def healthcheck(self):
         return self.connected
 
     def do_write(self, items):
         for data in items:
-            self.log.debug(f"Writing data {data}")
-            self.client.publish(data["data"]["topic"], json.dumps(data["data"]["data"]))
+            topic, data = data["data"]["topic"], json.dumps(data["data"]["data"])
+            self.log.info(f"<-- send: {topic}: {data}")
+            self.client.publish(topic, data)
 
     def start(self, exit_event):
         super().start(exit_event)

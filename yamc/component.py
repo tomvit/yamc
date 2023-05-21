@@ -35,8 +35,8 @@ class State:
         def _on_timer(name, data):
             timer = self.timers[name]
             del self.timers[name]
-            self.log.debug(
-                f"Timer occurred after {data['timer'][name]['value']} seconds. Calling registered callbacks."
+            self.log.info(
+                f"Timer elapsed after {data['timer'][name]['value']} seconds."
             )
             for data_callback in self.data_callbacks:
                 data_callback(data)
@@ -48,22 +48,22 @@ class State:
                         name, value = k1, float(v1["value"])
                         timer = self.timers.get(name)
                         if timer is None and value > 0:
-                            self.log.debug(
-                                f"Creating a new timer with name '{name}' and timeout {value}."
+                            self.log.info(
+                                f"The timer created, name='{name}', timeout={value}."
                             )
                             self.timers[name] = Timer(
                                 value, lambda: _on_timer(name, {"timer": v})
                             )
                             self.timers[name].start()
                         elif timer is not None and value == 0:
-                            self.log.debug(
-                                f"The timer with name '{name}' already exists, will cancel it as the value is set to 0."
+                            self.log.info(
+                                f"The timer cancelled, name='{name}', timeout=0."
                             )
                             self.timers[name].cancel()
                             del self.timers[name]
                         elif timer is not None:
                             self.log.debug(
-                                f"The timer with name '{name}' already exists and it will not be updated."
+                                f"The timer '{name}' already exists and it will not be updated."
                             )
                     except (ValueError, KeyError) as e:
                         self.log.error(

@@ -25,6 +25,8 @@ from functools import reduce
 
 import yamc.config as yamc_config
 
+from yamc.providers import EventProvider
+
 # they must be in a form ${VARIABLE_NAME}
 ENVNAME_PATTERN = "[A-Z0-9_]+"
 ENVPARAM_PATTERN = "\$\{%s\}" % ENVNAME_PATTERN
@@ -216,7 +218,7 @@ class Config:
         self.test = test
         self.log_level = log_level
         self.scope = Map(
-            writers=None, collectors=None, providers=None, all_components=[]
+            writers=None, collectors=None, providers=None, all_components=[], topics=None
         )
 
         if not (os.path.exists(file)):
@@ -249,6 +251,16 @@ class Config:
                         "Cannot load component '%s'. %s" % (component_id, str(e))
                     )
             return components
+
+        # def _select_topics(*topics):
+        #     sources = []
+        #     for provider in self.scope.providers:
+        #         print(provider, isinstance(provider, EventProvider))
+        #         if instanceof(provider, EventProvider):
+        #             print("***")
+        #             sources.append(provider.select(topics, silent=True))
+        #     print(sources)
+        #     return sources
 
         self.config = ConfigPart(self, None, self.raw_config, self.config_dir)
         self.data_dir = self.get_dir_path(
@@ -283,6 +295,7 @@ class Config:
         self.log.info("Initializing scope.")
         self.scope.writers = __load_components("writers")
         self.scope.providers = __load_components("providers")
+        # self.scope.topics = _select_topics
         self.scope.collectors = __load_components("collectors")
         self.scope.all_components = (
             list(self.scope.writers.values())
@@ -292,6 +305,7 @@ class Config:
         if self.custom_functions is not None:
             for k, v in self.custom_functions.items():
                 self.scope[k] = v
+
 
     def init_logging(self, logs_dir):
         """
@@ -448,12 +462,12 @@ class ConfigPart:
         if min is not None and v < min:
             raise Exception(
                 "The property %s value %s must be greater or equal to %d!"
-                % (self.path(path), min)
+                % (self.path(path), v, min)
             )
         if max is not None and v > max:
             raise Exception(
                 "The property %s value %s must be less or equal to %d!"
-                % (self.path(path), max)
+                % (self.path(path), v, max)
             )
         return v
 

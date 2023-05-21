@@ -32,6 +32,7 @@ class Writer(WorkerComponent):
         self.healthcheck_interval = self.config.value_int(
             "healthcheck_interval", default=20
         )
+        self.disable_backlog = self.config.value_int("disable_backlog", default=False)
         self.batch_size = self.config.value_int("batch_size", default=100)
         self._is_healthy = False
         self.last_healthcheck = 0
@@ -133,7 +134,7 @@ class Writer(WorkerComponent):
     def write(self, collector_id, data, writer_def, scope=None):
         """
         Non-blocking write operation. This method is called from a collector and must be non-blocking
-        so that the collector can process collecting of measurements
+        so that the collector can process collecting of measurements.
         """
         self.log.debug(
             f"Writing data using the following writer definition: {writer_def}"
@@ -152,17 +153,20 @@ class Writer(WorkerComponent):
             if self.write_interval == 0:
                 self.write_event.set()
         else:
-            self.backlog.put([_data])
+            if not self.disable_backlog:
+                self.backlog.put([_data])
+            else:
+                self.log.debug("No data will be stored in the backlog. The backlog is disabled.")
 
     def do_write(self, data):
         """
-        Abstract method to write data to a desintation writer
+        Abstract method to write data to a desintation writer.
         """
         pass
 
     def worker(self, exit_event):
         """
-        Thread worker method
+        Thread worker method.
         """
 
         def _process_qeue():
@@ -175,14 +179,14 @@ class Writer(WorkerComponent):
 
                 # write the batch
                 try:
-                    self.log.info(
+                    self.log.debug(
                         "Writing the batch, batch-size=%d, queue-size=%d."
                         % (len(batch), self.queue.qsize())
                     )
                     if not self.base_config.test:
                         self.do_write(batch)
                     else:
-                        self.log.info(
+                        self.log.debug(
                             "Running in test mode, the writing operation is disabled."
                         )
                 except HealthCheckException as e:

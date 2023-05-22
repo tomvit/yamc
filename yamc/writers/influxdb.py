@@ -59,10 +59,12 @@ class InfluxDBWriter(Writer):
                 tags=tags,
             )
             if point.time == 0:
-                log.error("Cannot write the data point %s to the influxdb due to a missing time field!" % str(point))
+                self.log.error(
+                    "Cannot write the data point %s to the influxdb due to a missing time field!" % str(point)
+                )
                 continue
             if len(point.fields.keys()) == 0:
-                log.warn("There are no fields in the data point %s!" % str(point))
+                self.log.warn("There are no fields in the data point %s!" % str(point))
             points.append(point)
 
         try:

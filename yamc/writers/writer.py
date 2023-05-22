@@ -71,26 +71,26 @@ class Writer(WorkerComponent):
             return d2
 
         def _process_block(c, data, path=""):
-            if_expr = c.get("if")
-            if_opts = [x.strip() for x in c.get("opts", "").split(",")]
+            if_expr = c.get("$if")
+            if_opts = [x.strip() for x in c.get("$opts", "").split(",")]
             if if_expr is not None:
-                path = path + "/if"
+                path = path + "/$if"
                 if not isinstance(if_expr, PythonExpression):
-                    raise _error(f"The 'if' expression must be a Python expression in {path}")
+                    raise _error(f"The '$if' expression must be a Python expression in {path}")
             try:
                 eval_result = if_expr is None or if_expr.eval(scope)
             except Exception as e:
                 raise _error(f"Error: {if_expr.expr_str} in {path}. {str(e)}")
             if eval_result and (
-                "onoff" not in if_opts or c.get("__last_if_eval") is None or eval_result != c.get("__last_if_eval")
+                "$onoff" not in if_opts or c.get("__last_if_eval") is None or eval_result != c.get("__last_if_eval")
             ):
-                df2 = c.get("def")
+                df2 = c.get("$def")
                 if df2 is not None:
-                    data = deep_merge(self.process_conditional_dict(c, scope, path + "/def"), data)
+                    data = deep_merge(self.process_conditional_dict(c, scope, path + "/$def"), data)
                 else:
                     data = deep_merge(
                         _deep_eval(
-                            {k: v for k, v in c.items() if k not in ["if", "opts", "__last_if_eval"]},
+                            {k: v for k, v in c.items() if k not in ["$if", "$opts", "__last_if_eval"]},
                             path,
                         ),
                         data,
@@ -100,14 +100,14 @@ class Writer(WorkerComponent):
             return data
 
         data = {}
-        df = d.get("def")
+        df = d.get("$def")
         if df is None:
-            raise _error(f"There must be 'def' property in {path}")
+            raise _error(f"There must be '$def' property in {path}")
         if isinstance(df, list):
             for i, c in enumerate(df):
-                data = _process_block(c, data, path + f"/def[{i}]")
+                data = _process_block(c, data, path + f"/$def[{i}]")
         else:
-            data = _process_block(df, data, path + "/def")
+            data = _process_block(df, data, path + "/$def")
         return data
 
     def write(self, collector_id, data, writer_def, scope=None):

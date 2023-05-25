@@ -53,4 +53,8 @@ setup(
         "Intended Audience :: Developers",
         "Programming Language :: Python :: 3.11",
     ],
+    entry_points="""
+        [console_scripts]
+        yamc=yamc.commands.yamc:yamc
+    """,
 )

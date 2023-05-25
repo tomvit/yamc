@@ -71,9 +71,9 @@ def read_raw_config(config_file, env_file):
     config_dir = os.path.dirname(config_file)
 
     # add defaults
-    add_defaults(config, "collectors")
-    add_defaults(config, "providers")
-    add_defaults(config, "writers")
+    process_templates(config, "collectors")
+    process_templates(config, "providers")
+    process_templates(config, "writers")
 
     return config, config_file, config_dir
 
@@ -112,19 +112,23 @@ def read_complex_config(file):
     return _traverse(os.path.dirname(config_file), config), config_file
 
 
-def add_defaults(config, component_name):
+def process_templates(config, component_type):
     """
-    Add defaults settings to individual `providers`, `collectors` and `writers`.
+    Process a template for all components of component type
     """
-    collectors_defaults = deep_find(config, f"defaults.{component_name}", default=[])
-    for cdef in collectors_defaults:
-        for k, v in config.get(component_name, {}).items():
-            if re.search(cdef.get("pattern"), k):
-                for k1, v1 in cdef.items():
-                    if k1 != "pattern":
-                        if k1 not in v.keys():
-                            v[k1] = v1
-    return config
+    all_templates = deep_find(config, f"templates.{component_type}", None)
+    if all_templates is not None:
+        components = deep_find(config, component_type, default={})
+        for _, component in components.items():
+            template_name = component.get("template")
+            if template_name is not None:
+                try:
+                    template = next(iter([x for x in all_templates if x["name"] == template_name]))
+                    for k1, v1 in template.items():
+                        if k1 not in component.keys():
+                            component[k1] = v1
+                except StopIteration:
+                    raise Exception(f"The template with name {template_name} does not exist!")
 
 
 def init_env(env_file, sep="=", comment="#"):

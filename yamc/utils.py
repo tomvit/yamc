@@ -6,8 +6,27 @@ import string
 import re
 import time
 import threading
+import json
 
 from functools import reduce
+
+
+class bcolors:
+    HEADER = "\033[95m"
+    OKBLUE = "\033[94m"
+    OKGREEN = "\033[32m"
+    WARNING = "\033[33m"
+    ERROR = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
+    LIGHTGRAY = "\033[90m"
+    MAGENTA = "\033[35m"
+
+
+def format_str_color(str, color, disable=False):
+    color = None if disable else color
+    return (color if color is not None else "") + str + (bcolors.ENDC if color is not None else "")
 
 
 class PythonExpression:

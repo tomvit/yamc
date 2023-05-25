@@ -17,3 +17,5 @@ config/fmw-config.yaml
 .python-version
 .vscode
 yamc.code-workspace
+*/*.env
+config/*.yaml

@@ -6,13 +6,14 @@ import time
 import re
 import threading
 import unidecode
+import logging
 
 from lxml import etree
 from yamc.component import BaseComponent, global_state
 
 from enum import Enum
 
-from yamc.utils import Map, deep_find
+from yamc.utils import Map, deep_find, merge_dicts
 
 
 class BaseProvider(BaseComponent):
@@ -55,7 +56,7 @@ class BaseProvider(BaseComponent):
             v.last_value = value
             return 0
 
-    def update(self):
+    def update(self, data=None):
         pass
 
 
@@ -253,6 +254,9 @@ class Topic:
         for callback in self.callbacks:
             callback(self)
 
+    def as_dict(self):
+        return Map(merge_dicts(Map(topic_id=self.topic_id, time=self.time), self.data))
+
     @property
     def last(self):
         return self.history[-1] if len(self.history) > 0 else Map()
@@ -261,21 +265,21 @@ class Topic:
         self.callbacks.append(callback)
 
 
-class EventProvider(BaseProvider):
+class EventSource:
     """
-    Event data provider providing the base class for event-based providers.
+    Event source object provides a link between a specific pub/sub mechanism
+    (such as MQTT) and yamc providers.
     """
 
-    def __init__(self, config, component_id):
-        super().__init__(config, component_id)
+    def __init__(self):
         self.topics = Map()
-        for topic_id in self.config.value("topics"):
-            self.add_topic(topic_id)
 
     def add_topic(self, topic_id):
         if self.topics.get(topic_id) is not None:
             raise Exception(f"The topic with id {topic_id} already exists!")
-        self.topics[topic_id] = self.create_topic(topic_id)
+        topic = self.create_topic(topic_id)
+        self.topics[topic_id] = topic
+        return topic
 
     def create_topic(self, topic_id):
         return Topic(topic_id, self)
@@ -294,8 +298,8 @@ class EventProvider(BaseProvider):
                         found = True
                         if v not in sources:
                             sources.append(v)
-            if not found and not silent:
-                self.log.warn(f"The topic with pattern '{id}' cannot be found!")
+            # if not found and not silent:
+            #     self.log.warn(f"The topic with pattern '{id}' cannot be found!")
         return sources
 
     def select_one(self, id):
@@ -304,6 +308,28 @@ class EventProvider(BaseProvider):
             return topics[0]
         else:
             return None
+
+
+class PerformanceProvider(BaseProvider, EventSource):
+    def __init__(self, config, component_id):
+        BaseProvider.__init__(self, config, component_id)
+        EventSource.__init__(self)
+        self.perf_topic = self.add_topic(f"yamc/performance/providers/{component_id}")
+
+    def update_perf(self, id, size, running_time):
+        self.perf_topic.update(Map(id=id, size=size, running_time=running_time))
+
+
+class EventProvider(BaseProvider, EventSource):
+    """
+    Event data provider providing the base class for event-based providers.
+    """
+
+    def __init__(self, config, component_id):
+        BaseProvider.__init__(self, config, component_id)
+        EventSource.__init__(self)
+        for topic_id in self.config.value("topics"):
+            self.add_topic(topic_id)
 
     def update(self, topic=None):
         self._updated_time = time.time()

@@ -4,15 +4,15 @@
 import time
 
 from dms_collector import DmsCollector
-from yamc.providers import BaseProvider
+from yamc.providers import PerformanceProvider
 
 from yamc.utils import Map, perf_counter
 
 
-class DmsProvider(BaseProvider):
+class DmsProvider(PerformanceProvider):
     """
-    A yamc provider for Oracle FMW DMS Spy application. DMS Spy provides a massive amount of metrics about WebLogic and other software running in WebLogic.
-    The provider is a wrapper around dms-collector.
+    A yamc provider for Oracle FMW DMS Spy application. DMS Spy provides a massive amount of metrics about WebLogic
+    and other software running in WebLogic. The provider is a wrapper around dms-collector.
     """
 
     def __init__(self, config, component_id):
@@ -45,8 +45,6 @@ class DmsProvider(BaseProvider):
             return x
 
         data = list(map(_add_time, d["data"]))
-        self.log.info(
-            f"The DMS table operation retrieved {len(data)} records in {d['query_time']:0.4f} seconds from '{table}'."
-        )
-        self.log.trace(f"The following data were retrieved from the DMS: {str(data)}")
+        self.update_perf(table, len(data), d["query_time"])
+        self.log.info(f"The DMS retrieved {len(data)} records in {d['query_time']:0.4f} seconds from '{table}'.")
         return data

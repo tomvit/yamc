@@ -106,8 +106,14 @@ class Writer(WorkerComponent):
         if isinstance(df, list):
             for i, c in enumerate(df):
                 data = _process_block(c, data, path + f"/$def[{i}]")
+        elif isinstance(df, PythonExpression):
+            r = df.eval(scope)
+            if not isinstance(r, dict):
+                raise _error(f"The '$def' expression must return a dictionary in {path}")
+            data = _process_block(r, data, path + "/$def")
         else:
             data = _process_block(df, data, path + "/$def")
+        # self.log.debug(f"The conditional dict resulted in the following data: {data}")
         return data
 
     def write(self, collector_id, data, writer_def, scope=None):
@@ -116,24 +122,40 @@ class Writer(WorkerComponent):
         so that the collector can process collecting of measurements.
         """
         self.log.debug(f"Writing data using the following writer definition: {writer_def}")
-        _scope = Map() if scope is None else scope
-        _scope.data = data
-        _data = Map(
-            collector_id=collector_id,
-            data=self.process_conditional_dict(writer_def, self.base_scope(_scope)),
-        )
-        self.log.debug(f"The conditional dict resulted in the following data: {_data}")
-        if len(_data["data"]) == 0 and not self.write_empty:
-            self.log.debug("The data is empty, will not write them.")
-        elif self.is_healthy():
-            self.queue.put(_data)
-            if self.write_interval == 0:
-                self.write_event.set()
-        else:
-            if not self.disable_backlog:
-                self.backlog.put([_data])
+        if len(writer_def) == 0:
+            raise Exception("Writer defintion is empty!")
+
+        data_out = []
+
+        def _add_to_queue(data_item):
+            _scope = Map() if scope is None else scope
+            _scope.data = data_item
+            _data = Map(
+                collector_id=collector_id,
+                data=self.process_conditional_dict(writer_def, self.base_scope(_scope)),
+            )
+            data_out.append(_data)
+            if len(_data["data"]) == 0 and not self.write_empty:
+                pass
+            elif self.is_healthy():
+                self.queue.put(_data)
             else:
-                self.log.debug("No data will be stored in the backlog. The backlog is disabled.")
+                if not self.disable_backlog:
+                    self.backlog.put([_data])
+
+        if isinstance(data, list):
+            for data_item in data:
+                _add_to_queue(data_item)
+        else:
+            _add_to_queue(data)
+        if len(data_out) == 1:
+            self.log.debug(f"The following data will be written out: {str(data_out)}")
+        else:
+            self.log.debug(
+                f"The following data will be written out (length={len(data_out)}, stripped): {str(data_out[0])}"
+            )
+        if self.write_interval == 0:
+            self.write_event.set()
 
     def do_write(self, data):
         """
@@ -166,15 +188,13 @@ class Writer(WorkerComponent):
                 except HealthCheckException as e:
                     self.log.error(
                         "Cannot write the batch due to writer's problem: %s. The batch will be stored in the backlog."
-                        % (str(e)),
-                        exc_info=self.base_config.debug,
+                        % (str(e))
                     )
                     self._is_healthy = False
                     self.backlog.put(batch)
                 except Exception as e:
                     self.log.error(
-                        "Cannot write the batch. It will be discarded due to the following error: %s" % (str(e)),
-                        exc_info=self.base_config.debug,
+                        "Cannot write the batch. It will be discarded due to the following error: %s" % (str(e))
                     )
 
         while not exit_event.is_set():

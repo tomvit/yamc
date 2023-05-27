@@ -30,14 +30,14 @@ class InfluxDBWriter(Writer):
     def _create_fields_tags(self, data):
         def _value(v):
             if callable(getattr(v, "eval", None)):
-                return v.eval(self.base_scope(Map(data=Map(data.data))))
+                return v.eval(self.base_scope(Map(data=Map(data))))
             else:
                 return v
 
         fields, tags = {}, {}
-        for tag, value in data.writer_config.get("tags", {}).items():
+        for tag, value in data.get("tags", {}).items():
             tags[tag] = _value(value)
-        for field, value in data.writer_config.get("fields", {}).items():
+        for field, value in data.get("fields", {}).items():
             fields[field] = _value(value)
         if len(fields.keys()) == 0 and len(tags.keys()) == 0:
             for k, v in data.data.items():
@@ -51,9 +51,9 @@ class InfluxDBWriter(Writer):
     def do_write(self, items):
         points = []
         for data in items:
-            fields, tags = self._create_fields_tags(data)
+            fields, tags = self._create_fields_tags(data.data)
             point = Map(
-                measurement=data.writer_config.get("measurement", data.collector_id),
+                measurement=data.get("measurement", data.collector_id),
                 time=int(data.data.get("time", 0)) * 1000000000,
                 fields=fields,
                 tags=tags,

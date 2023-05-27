@@ -38,7 +38,10 @@ class PythonExpression:
         return compile(self.expr_str, "<string>", "eval")
 
     def eval(self, scope):
-        return eval(self.expr, {}, scope)
+        try:
+            return eval(self.expr, {}, scope)
+        except Exception as e:
+            raise Exception(f"Error evaluating expression '{self.expr_str}': {e}")
 
     def __getstate__(self):
         return (self.expr_str, None)

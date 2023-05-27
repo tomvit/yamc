@@ -22,7 +22,7 @@ from functools import reduce
 
 import yamc.config as yamc_config
 
-from yamc.providers import EventProvider
+from yamc.providers import EventSource
 
 # they must be in a form ${VARIABLE_NAME}
 ENVNAME_PATTERN = "[A-Z0-9_]+"
@@ -235,15 +235,12 @@ class Config:
                     raise Exception("Cannot load component '%s'. %s" % (component_id, str(e)))
             return components
 
-        # def _select_topics(*topics):
-        #     sources = []
-        #     for provider in self.scope.providers:
-        #         print(provider, isinstance(provider, EventProvider))
-        #         if instanceof(provider, EventProvider):
-        #             print("***")
-        #             sources.append(provider.select(topics, silent=True))
-        #     print(sources)
-        #     return sources
+        def __select_topics(*topics):
+            sources = []
+            for name, provider in self.scope.providers.items():
+                if isinstance(provider, EventSource):
+                    sources.extend(provider.select(*topics, silent=True))
+            return sources
 
         self.config = ConfigPart(self, None, self.raw_config, self.config_dir)
         self.data_dir = self.get_dir_path(self.config.value("directories.data", default="../data"))
@@ -269,6 +266,7 @@ class Config:
 
         # initialize scope
         self.log.info("Initializing scope.")
+        self.scope.select = __select_topics
         self.scope.writers = __load_components("writers")
         self.scope.providers = __load_components("providers")
         # self.scope.topics = _select_topics
@@ -384,6 +382,11 @@ class ConfigPart:
     def path(self, path):
         return "%s.%s" % (self.base_path, path) if self.base_path is not None else path
 
+    def eval(self, val):
+        if callable(getattr(val, "eval", None)):
+            return val.eval(self.parent.scope)
+        return val
+
     def value(self, path, default=None, type=None, required=True, no_eval=False):
         required = default is not None and required
         r = default
@@ -399,7 +402,7 @@ class ConfigPart:
                 if not no_eval:
                     if callable(getattr(val, "eval", None)):
                         try:
-                            val = val.eval(merge_dicts(self.parent.custom_functions, self.parent.scope))
+                            val = self.eval(val)
                         except Exception as e:
                             raise Exception(
                                 "Cannot evaluate Python expression for property '%s'. %s" % (self.path(path), str(e))

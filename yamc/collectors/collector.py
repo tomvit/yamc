@@ -9,7 +9,10 @@ import copy
 
 from datetime import datetime
 from yamc.component import WorkerComponent
-from yamc.utils import Map, deep_eval, merge_dicts
+from yamc.providers import Topic
+from yamc.utils import Map, deep_eval, merge_dicts, PythonExpression
+
+import yamc.config as yamc_config
 
 
 class BaseCollector(WorkerComponent):
@@ -103,7 +106,7 @@ class CronCollector(BaseCollector):
                 self.log.warning(
                     f"The next run of the job {self.component_id} already passed by {seconds} seconds. Trying the next iteration."
                 )
-        self.log.debug(f"The next job of '{self.component_id}' will run at {next_run} (in {seconds} seconds).")
+        self.log.info(f"The next job of '{self.component_id}' will run in {seconds} seconds (@{next_run}).")
         return seconds
 
     def worker(self, exit_event):
@@ -116,22 +119,34 @@ class CronCollector(BaseCollector):
                 try:
                     self.write(self.prepare_data())
                 except Exception as e:
-                    self.log.error(
-                        "The job failed due to %s" % (str(e)),
-                        exc_info=self.base_config.debug,
-                    )
+                    self.log.error("The job failed due to %s" % (str(e)))
                 time2sleep = self.get_time_to_sleep(itr)
 
 
 class EventCollector(BaseCollector):
     def __init__(self, config, component_id):
         super().__init__(config, component_id)
-        self.source = self.config.value("source", required=True)
+        if not isinstance(self.data_def, PythonExpression):
+            raise Exception(f"The data must be of type {PythonExpression.__class__.__name__}")
+
+        self.source = self.config.eval(self.data_def)
+        self.data_def = Map(__nod=0)
+        if isinstance(self.source, list):
+            for x in self.source:
+                if not isinstance(x, Topic):
+                    raise Exception(f"The data must be the list of types {Topic.__class__.__name__}")
+        elif not isinstance(self.source, Topic):
+            raise Exception(f"The data must be of type {Topic.__class__.__name__}")
+
         self.log.info("The event sources are: %s" % (", ".join([x.topic_id for x in self.source])))
 
     def worker(self, exit_event):
+        def _event(e):
+            self.log.info(f"Received event {e.topic_id}")
+            self.write(e.as_dict(), scope=Map(data=e.as_dict()))
+
         for s in self.source:
             self.log.info(f"Subscribing to events from '{s.topic_id}'")
-            s.subscribe(lambda x: self.write(self.prepare_data(scope=Map(event=x)), scope=Map(event=x)))
+            s.subscribe(_event)
         while not exit_event.is_set():
             exit_event.wait(1)

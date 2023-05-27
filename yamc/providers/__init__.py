@@ -7,6 +7,8 @@ from .provider import (
     XmlHttpProvider,
     CsvHttpProvider,
     Topic,
+    PerformanceProvider,
+    EventSource,
     EventProvider,
     StateProvider,
 )

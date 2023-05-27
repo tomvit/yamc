@@ -5,9 +5,10 @@ import re
 import time
 import os
 
-import cx_Oracle
+import oracledb
 
-from yamc.providers import BaseProvider
+from yamc.providers import PerformanceProvider
+from yamc.utils import Map
 
 
 def makeDictFactory(cursor):
@@ -23,12 +24,13 @@ def hide_password(connstr):
     return re.sub("\/(.+)@", "/(secret)@", connstr)
 
 
-class OraDBProvider(BaseProvider):
+class OraDBProvider(PerformanceProvider):
     def __init__(self, config, component_id):
         super().__init__(config, component_id)
+
         self.connection = None
         self.connect_time = None
-        self.cache = {}
+        self.cache = Map()
 
         # configuration
         self.connstr = self.config.value_str("connstr", required=True)
@@ -40,7 +42,7 @@ class OraDBProvider(BaseProvider):
             if self.connection is not None:
                 self.close()
             self.log.info(f"Opening the DB connection, connstr={hide_password(self.connstr)}")
-            self.connection = cx_Oracle.connect(self.connstr)
+            self.connection = oracledb.connect(self.connstr)
             self.connect_time = time.time()
 
     def close(self):
@@ -61,8 +63,8 @@ class OraDBProvider(BaseProvider):
             lines = []
             with open(fname, "r") as file:
                 lines = [x for x in file]
-            self.cache[sql_file] = "\n".join(lines)
-        return self.cache.get(sql_file)
+            self.cache[sql_file] = "".join(lines)
+        return self.cache[sql_file]
 
     def sql(self, sql_file, variables=[]):
         statement = self.load_statement(sql_file)
@@ -77,10 +79,13 @@ class OraDBProvider(BaseProvider):
             for row in cursor:
                 row["time"] = query_time
                 data.append(row)
+            running_time = time.time() - query_time
+
+            self.update_perf(os.path.basename(sql_file), len(data), running_time)
             self.log.info(
-                f"The OraDB sql operation retrieved {len(data)} records in {time.time()-query_time:0.04f} seconds."
+                f"The result of the statement {os.path.basename(sql_file)} has {len(data)} rows and was retrieved "
+                + f"in {time.time()-query_time:0.04f} seconds."
             )
-            self.log.trace(f"The following data were retrieved from the DB: {str(data)}")
             return data
         finally:
             cursor.close()
